@@ -1,5 +1,5 @@
 import ListarProdutos from "./Produtos/ListarProdutos";
-import styles from "./page.module.css";
+import styles from "./home.module.css";
 
 export default function Home() {
   return (
