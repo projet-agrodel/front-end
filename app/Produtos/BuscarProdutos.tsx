@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Ícone de lupa para o campo de busca
 const MagnifyingGlassIcon = ({ className = '' }: { className?: string }) => (
@@ -22,11 +22,17 @@ const MagnifyingGlassIcon = ({ className = '' }: { className?: string }) => (
 
 interface BuscarProdutosProps {
   onSearch: (termo: string) => void;
+  initialValue?: string;
   className?: string;
 }
 
-const BuscarProdutos = ({ onSearch, className = '' }: BuscarProdutosProps) => {
-  const [termoBusca, setTermoBusca] = useState('');
+const BuscarProdutos = ({ onSearch, initialValue = '', className = '' }: BuscarProdutosProps) => {
+  const [termoBusca, setTermoBusca] = useState(initialValue);
+  
+  // Atualiza o termo de busca quando o initialValue mudar
+  useEffect(() => {
+    setTermoBusca(initialValue);
+  }, [initialValue]);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,23 +40,25 @@ const BuscarProdutos = ({ onSearch, className = '' }: BuscarProdutosProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className={`relative ${className}`}>
-      <div className="relative">
+    <form onSubmit={handleSubmit} className={`flex items-center space-x-2 ${className}`}>
+      <div className="relative flex-grow">
         <input
           type="text"
           placeholder="Buscar produtos..."
           value={termoBusca}
           onChange={(e) => setTermoBusca(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
         />
-        <button
-          type="submit"
-          className="absolute inset-y-0 left-0 pl-3 flex items-center"
-          aria-label="Buscar"
-        >
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <MagnifyingGlassIcon className="w-5 h-5 text-gray-500" />
-        </button>
+        </div>
       </div>
+      <button
+        type="submit"
+        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
+      >
+        Buscar
+      </button>
     </form>
   );
 };

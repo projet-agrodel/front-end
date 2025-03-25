@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import CardProduto, { Produto } from './CardProduto';
 import BuscarProdutos from './BuscarProdutos';
 
@@ -67,11 +68,44 @@ interface ListarProdutosProps {
 }
 
 const ListarProdutos = ({ children }: ListarProdutosProps) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filtroCategoria, setFiltroCategoria] = useState<string | null>(null);
-  const [termoBusca, setTermoBusca] = useState('');
+  
+  // Obter parâmetros da URL
+  const filtroCategoria = searchParams.get('categoria');
+  const termoBusca = searchParams.get('q') || '';
+  
+  // Função para atualizar a URL com os parâmetros de busca
+  const updateUrlParams = (params: { q?: string; categoria?: string | null }) => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    
+    // Atualizar parâmetro de busca
+    if (params.q !== undefined) {
+      if (params.q) {
+        newParams.set('q', params.q);
+      } else {
+        newParams.delete('q');
+      }
+    }
+    
+    // Atualizar parâmetro de categoria
+    if (params.categoria !== undefined) {
+      if (params.categoria) {
+        newParams.set('categoria', params.categoria);
+      } else {
+        newParams.delete('categoria');
+      }
+    }
+    
+    // Construir a nova URL
+    const newUrl = newParams.toString() ? `${pathname}?${newParams.toString()}` : pathname;
+    router.push(newUrl);
+  };
 
   useEffect(() => {
     // Simulating API fetch with mock data
@@ -115,7 +149,12 @@ const ListarProdutos = ({ children }: ListarProdutosProps) => {
 
   // Handler para busca
   const handleSearch = (termo: string) => {
-    setTermoBusca(termo);
+    updateUrlParams({ q: termo });
+  };
+  
+  // Handler para filtro de categoria
+  const handleCategoriaChange = (categoria: string | null) => {
+    updateUrlParams({ categoria });
   };
 
   return (
@@ -126,7 +165,11 @@ const ListarProdutos = ({ children }: ListarProdutosProps) => {
         </h1>
         
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          <BuscarProdutos onSearch={handleSearch} className="w-full md:w-64" />
+          <BuscarProdutos 
+            onSearch={handleSearch} 
+            initialValue={termoBusca}
+            className="w-full md:w-64" 
+          />
           
           <div className="flex items-center mt-4 md:mt-0">
             <label htmlFor="categoria" className="text-gray-700 mr-2 whitespace-nowrap">Filtrar por:</label>
@@ -134,7 +177,7 @@ const ListarProdutos = ({ children }: ListarProdutosProps) => {
               id="categoria"
               className="border border-gray-300 rounded-md py-2 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               value={filtroCategoria || ''}
-              onChange={(e) => setFiltroCategoria(e.target.value || null)}
+              onChange={(e) => handleCategoriaChange(e.target.value || null)}
             >
               <option value="">Todas as Categorias</option>
               {categorias.map((categoria) => (
