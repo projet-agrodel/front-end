@@ -47,7 +47,7 @@ const CardProduto = ({ produto }: CardProdutoProps) => {
           </span>
           
           <button 
-            className="bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded-3xl text-xt transition-colors"
+            className="bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded-3xl text-xt transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
             onClick={() => console.log(`Adicionar produto ${produto.id} ao carrinho`)}
           >
             Adicionar
