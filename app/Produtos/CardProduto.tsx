@@ -18,7 +18,7 @@ interface CardProdutoProps {
 // Função para obter uma cor baseada na categoria do produto
 const getCategoryColor = (categoria: string): string => {
   const colors: Record<string, string> = {
-    'Fertilizantes': 'bg-primary-600',
+    'Fertilizantes': 'bg-purple-600',
     'Sementes': 'bg-yellow-500',
     'Ferramentas': 'bg-blue-500',
     'Defensivos': 'bg-red-500',

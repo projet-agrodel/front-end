@@ -60,6 +60,60 @@ const produtosMock: Produto[] = [
     imagem: '',
     categoria: 'Ferramentas',
     estoque: 25
+  },
+  {
+    id: 7,
+    nome: 'Fertilizante NPK 10-10-10',
+    preco: 52.80,
+    descricao: 'Fertilizante mineral balanceado para desenvolvimento completo das plantas.',
+    imagem: '',
+    categoria: 'Fertilizantes',
+    estoque: 65
+  },
+  {
+    id: 8,
+    nome: 'Sementes de Tomate Cereja',
+    preco: 15.99,
+    descricao: 'Sementes selecionadas de tomate cereja, alta produtividade.',
+    imagem: '',
+    categoria: 'Sementes',
+    estoque: 90
+  },
+  {
+    id: 9,
+    nome: 'Pulverizador 2L',
+    preco: 35.50,
+    descricao: 'Pulverizador manual com capacidade de 2 litros para aplicação de defensivos.',
+    imagem: '',
+    categoria: 'Ferramentas',
+    estoque: 40
+  },
+  {
+    id: 10,
+    nome: 'Inseticida Biológico',
+    preco: 42.99,
+    descricao: 'Inseticida à base de Bacillus thuringiensis, controle biológico de pragas.',
+    imagem: '',
+    categoria: 'Defensivos',
+    estoque: 30
+  },
+  {
+    id: 11,
+    nome: 'Substrato para Cactos',
+    preco: 22.50,
+    descricao: 'Substrato especial para cactos e suculentas, drenagem ideal.',
+    imagem: '',
+    categoria: 'Substratos',
+    estoque: 55
+  },
+  {
+    id: 12,
+    nome: 'Pá de Jardinagem',
+    preco: 18.75,
+    descricao: 'Pá de jardinagem com cabo ergonômico, ideal para transplantes.',
+    imagem: '',
+    categoria: 'Ferramentas',
+    estoque: 60
   }
 ];
 
@@ -168,7 +222,7 @@ const ListarProdutos = ({ children }: ListarProdutosProps) => {
           <BuscarProdutos 
             onSearch={handleSearch} 
             initialValue={termoBusca}
-            className="w-full md:w-64" 
+            className="w-full md:w-100" 
           />
           
           <div className="flex items-center mt-4 md:mt-0">
