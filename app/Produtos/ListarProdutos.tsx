@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import CardProduto, { Produto } from './CardProduto';
 import BuscarProdutos from './BuscarProdutos';
+import { getFilteredProducts } from './services/searchService';
 
 // Dados fictícios (Deverá ser substituído por chamadas de API depois).
 const produtosMock: Produto[] = [
@@ -117,11 +118,7 @@ const produtosMock: Produto[] = [
   }
 ];
 
-interface ListarProdutosProps {
-  children?: React.ReactNode;
-}
-
-const ListarProdutos = ({ children }: ListarProdutosProps) => {
+const ListarProdutos = () => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -134,26 +131,14 @@ const ListarProdutos = ({ children }: ListarProdutosProps) => {
   const filtroCategoria = searchParams.get('categoria');
   const termoBusca = searchParams.get('q') || '';
   
-  // Função para atualizar a URL com os parâmetros de busca
-  const updateUrlParams = (params: { q?: string; categoria?: string | null }) => {
+  // Função para atualizar apenas o parâmetro de categoria na URL
+  const updateCategoryParam = (categoria: string | null) => {
     const newParams = new URLSearchParams(searchParams.toString());
     
-    // Atualizar parâmetro de busca
-    if (params.q !== undefined) {
-      if (params.q) {
-        newParams.set('q', params.q);
-      } else {
-        newParams.delete('q');
-      }
-    }
-    
-    // Atualizar parâmetro de categoria
-    if (params.categoria !== undefined) {
-      if (params.categoria) {
-        newParams.set('categoria', params.categoria);
-      } else {
-        newParams.delete('categoria');
-      }
+    if (categoria) {
+      newParams.set('categoria', categoria);
+    } else {
+      newParams.delete('categoria');
     }
     
     // Construir a nova URL
@@ -162,122 +147,104 @@ const ListarProdutos = ({ children }: ListarProdutosProps) => {
   };
 
   useEffect(() => {
-    // Simulating API fetch with mock data
     const fetchProdutos = () => {
       try {
         setIsLoading(true);
-        
-        // Simulate API delay
+        // Simula API delay
         setTimeout(() => {
-          let produtosFiltrados = produtosMock;
+          // Usar o serviço de busca para obter produtos filtrados
+          const produtosFiltrados = getFilteredProducts(
+            produtosMock,
+            termoBusca,
+            filtroCategoria
+          );
           
-          // Filtrar por categoria se selecionada
-          if (filtroCategoria) {
-            produtosFiltrados = produtosFiltrados.filter(p => p.categoria === filtroCategoria);
-          }
-          
-          // Filtrar por termo de busca se existir
-          if (termoBusca.trim()) {
-            const termo = termoBusca.toLowerCase();
-            produtosFiltrados = produtosFiltrados.filter(p => 
-              p.nome.toLowerCase().includes(termo) || 
-              p.descricao.toLowerCase().includes(termo)
-            );
-          }
-            
           setProdutos(produtosFiltrados);
           setIsLoading(false);
-        }, 500);
-      } catch (error) {
-        console.error('Erro ao buscar produtos:', error);
-        setError('Falha ao carregar produtos. Tente novamente mais tarde.');
+        }, 500); // Delay simulado
+      } catch (err) {
         setIsLoading(false);
+        setError('Erro ao carregar produtos');
+        console.error('Erro ao buscar produtos:', err);
       }
     };
 
     fetchProdutos();
-  }, [filtroCategoria, termoBusca]);
+  }, [termoBusca, filtroCategoria]);
 
-  // Get unique categories from products
-  const categorias = [...new Set(produtosMock.map(p => p.categoria))];
+  // Categorias únicas para o filtro
+  const categorias = Array.from(new Set(produtosMock.map(p => p.categoria)));
 
-  // Handler para busca
-  const handleSearch = (termo: string) => {
-    updateUrlParams({ q: termo });
-  };
-  
   // Handler para filtro de categoria
-  const handleCategoriaChange = (categoria: string | null) => {
-    updateUrlParams({ categoria });
+  const handleCategoryChange = (categoria: string | null) => {
+    updateCategoryParam(categoria);
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4 md:mb-0">
-          Nossos Produtos
-        </h1>
-        
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          <BuscarProdutos 
-            onSearch={handleSearch} 
-            initialValue={termoBusca}
-            className="w-full md:w-100" 
-          />
-          
-          <div className="flex items-center mt-4 md:mt-0">
-            <label htmlFor="categoria" className="text-gray-700 mr-2 whitespace-nowrap">Filtrar por:</label>
-            <select
-              id="categoria"
-              className="border border-gray-300 rounded-md py-2 px-3 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              value={filtroCategoria || ''}
-              onChange={(e) => handleCategoriaChange(e.target.value || null)}
-            >
-              <option value="">Todas as Categorias</option>
-              {categorias.map((categoria) => (
-                <option key={categoria} value={categoria}>
-                  {categoria}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      {/* Barra de busca */}
+      <div className="mb-8">
+        <BuscarProdutos className="max-w-3xl mx-auto" />
       </div>
-
-      {isLoading ? (
-        <div className="flex justify-center items-center py-12">
-          <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      ) : error ? (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-          {error}
-        </div>
-      ) : (
-        <>
-          {produtos.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600">
-                {termoBusca
-                  ? 'Nenhum produto encontrado para esta busca.'
-                  : 'Nenhum produto encontrado para esta categoria.'}
-              </p>
-            </div>
-          ) : (
-            <>
-              <p className="text-sm text-gray-500 mb-4">
-                {produtos.length} {produtos.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {produtos.map((produto) => (
-                  <CardProduto key={produto.id} produto={produto} />
-                ))}
-              </div>
-            </>
-          )}
-        </>
-      )}
       
-      {children}
+      {/* Filtros */}
+      <div className="mb-8 flex flex-wrap gap-2">
+        <button
+          onClick={() => handleCategoryChange(null)}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            !filtroCategoria ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
+          }`}
+        >
+          Todos
+        </button>
+        
+        {categorias.map((categoria) => (
+          <button
+            key={categoria}
+            onClick={() => handleCategoryChange(categoria)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              filtroCategoria === categoria ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+          >
+            {categoria}
+          </button>
+        ))}
+      </div>
+      
+      {/* Listagem de produtos */}
+      <div>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-20">
+            <p className="text-red-500 text-xl">{error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 bg-green-500 text-white px-4 py-2 rounded-lg"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : produtos.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-xl text-gray-600">Nenhum produto encontrado</p>
+            <p className="text-gray-500 mt-2">Tente usar outros termos de busca ou filtros.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {produtos.map((produto, index) => (
+              <div 
+                key={produto.id}
+                className={`opacity-0 animate-fade-in-up delay-${Math.min(index, 15)}`}
+              >
+                <CardProduto produto={produto} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

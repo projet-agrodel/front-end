@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 
 // Ícone de lupa para o campo de busca
 const MagnifyingGlassIcon = ({ className = '' }: { className?: string }) => (
@@ -21,22 +22,48 @@ const MagnifyingGlassIcon = ({ className = '' }: { className?: string }) => (
 );
 
 interface BuscarProdutosProps {
-  onSearch: (termo: string) => void;
-  initialValue?: string;
   className?: string;
+  onSearchChange?: (termo: string) => void;
 }
 
-const BuscarProdutos = ({ onSearch, initialValue = '', className = '' }: BuscarProdutosProps) => {
-  const [termoBusca, setTermoBusca] = useState(initialValue);
+const BuscarProdutos = ({ className = '', onSearchChange }: BuscarProdutosProps) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   
-  // Atualiza o termo de busca quando o initialValue mudar
+  // Get the current search term from URL
+  const initialTerm = searchParams.get('q') || '';
+  const [termoBusca, setTermoBusca] = useState(initialTerm);
+  
+  // Update search term when URL changes
   useEffect(() => {
-    setTermoBusca(initialValue);
-  }, [initialValue]);
+    const currentTerm = searchParams.get('q') || '';
+    setTermoBusca(currentTerm);
+  }, [searchParams]);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSearch(termoBusca);
+    updateSearchParam(termoBusca);
+    
+    // Optional callback for components that need immediate notification
+    if (onSearchChange) {
+      onSearchChange(termoBusca);
+    }
+  };
+  
+  // Update URL with search parameter
+  const updateSearchParam = (termo: string) => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    
+    if (termo.trim()) {
+      newParams.set('q', termo.trim());
+    } else {
+      newParams.delete('q');
+    }
+    
+    // Preserve existing category filter if present
+    const newUrl = newParams.toString() ? `${pathname}?${newParams.toString()}` : pathname;
+    router.push(newUrl);
   };
 
   return (
