@@ -5,7 +5,7 @@ export const metadata = {
   description: 'Explore nosso catálogo de produtos agrícolas de alta qualidade',
 };
 
-export default function ProdutosRedirectPage() {
+export default function Produtos() {
   return (
     <div>
       <ListarProdutos/>
