@@ -30,7 +30,7 @@ const Navbar = () => {
               </Link>
               
               <Link 
-                href="/Produtos" 
+                href='/Produtos'
                 className={`px-3 py-2 rounded-md text-sm font-medium ${
                   pathname.startsWith('/Produtos') 
                     ? 'bg-green-500 text-white' 

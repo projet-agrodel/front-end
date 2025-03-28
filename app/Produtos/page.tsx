@@ -1,6 +1,4 @@
-import React from 'react';
 import ListarProdutos from './ListarProdutos';
-import { redirect } from 'next/navigation';
 
 export const metadata = {
   title: 'Produtos - Agrodel',
@@ -8,5 +6,9 @@ export const metadata = {
 };
 
 export default function ProdutosRedirectPage() {
-  redirect('/Produtos');
+  return (
+    <div>
+      <ListarProdutos/>
+    </div>
+  )
 }

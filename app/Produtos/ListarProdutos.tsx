@@ -191,7 +191,7 @@ const ListarProdutos = () => {
       <div className="mb-8 flex flex-wrap gap-2">
         <button
           onClick={() => handleCategoryChange(null)}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-all transform hover:scale-105 active:scale-95 ${
             !filtroCategoria ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
           }`}
         >
@@ -202,7 +202,7 @@ const ListarProdutos = () => {
           <button
             key={categoria}
             onClick={() => handleCategoryChange(categoria)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all transform hover:scale-105 active:scale-95 ${
               filtroCategoria === categoria ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
             }`}
           >
