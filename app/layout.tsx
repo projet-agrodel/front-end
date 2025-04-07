@@ -26,13 +26,13 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 flex flex-col min-h-screen`}
       >
         <Navbar />
-        <main>
+        <main className="pt-1 flex-grow flex flex-col">
           {children}
         </main>
-        <footer className="bg-green-800 text-white py-8 mt-10">
+        <footer className="bg-green-800 text-white py-8 mt-auto">
           <div className="container mx-auto px-4 text-center">
             <p>© {new Date().getFullYear()} Agrodel - Todos os direitos reservados</p>
           </div>
