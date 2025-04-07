@@ -12,22 +12,20 @@ const Navbar = () => {
   const [userName, setUserName] = useState('');
 
   useEffect(() => {
-    // Check login status from sessionStorage on component mount (client-side only)
     const loggedInStatus = sessionStorage.getItem('isLoggedIn');
     const storedUserName = sessionStorage.getItem('userName');
     setIsLoggedIn(loggedInStatus === 'true');
     if (loggedInStatus === 'true' && storedUserName) {
       setUserName(storedUserName);
     }
-  }, [pathname]); // Re-run effect if pathname changes, e.g., after login/logout redirection
+  }, [pathname]);
 
   const handleLogout = () => {
     sessionStorage.removeItem('isLoggedIn');
     sessionStorage.removeItem('userName');
     setIsLoggedIn(false);
     setUserName('');
-    router.push('/'); // Redirect to home page after logout
-    // Optionally, force a re-render or reload if needed
+    router.push('/'); 
     router.refresh();
   };
 

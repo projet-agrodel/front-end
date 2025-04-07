@@ -14,7 +14,6 @@ const LoginPage = () => {
     e.preventDefault();
     setError('');
 
-    // Retrieve user data from localStorage
     const storedUser = localStorage.getItem('user');
 
     if (!storedUser) {
@@ -24,15 +23,11 @@ const LoginPage = () => {
 
     const user = JSON.parse(storedUser);
 
-    // Basic validation (replace with actual authentication logic)
     if (user.email === email && user.password === password) {
       console.log('Login successful for:', email);
-      // In a real app, you would typically set a session token here
-      // For now, just store login status
       sessionStorage.setItem('isLoggedIn', 'true');
-      sessionStorage.setItem('userName', user.name); // Store user name
+      sessionStorage.setItem('userName', user.name);
 
-      // Redirect to home page or dashboard
       router.push('/');
     } else {
       setError('Email ou senha inválidos.');

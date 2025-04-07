@@ -23,13 +23,11 @@ const RegisterPage = () => {
       return;
     }
 
-    // Basic validation (add more as needed)
     if (!name || !email || !password) {
       setError('Todos os campos são obrigatórios.');
       return;
     }
 
-    // Check if user already exists (simple check for demo)
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
         const existingUser = JSON.parse(storedUser);
@@ -39,14 +37,12 @@ const RegisterPage = () => {
         }
     }
 
-    // Store user data in localStorage (replace with API call later)
-    const newUser = { name, email, password }; // NEVER store plain passwords in real apps
+    const newUser = { name, email, password };
     localStorage.setItem('user', JSON.stringify(newUser));
 
     console.log('Registration successful for:', email);
     setSuccess('Registro realizado com sucesso! Redirecionando para login...');
 
-    // Redirect to login page after a short delay
     setTimeout(() => {
       router.push('/login');
     }, 2000);
@@ -146,7 +142,7 @@ const RegisterPage = () => {
             <button
               type="submit"
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-              disabled={!!success} // Disable button after successful registration
+              disabled={!!success}
             >
               Registrar
             </button>
