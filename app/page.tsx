@@ -1,12 +1,11 @@
 import BannerCarrossel from './components/BannerCarrossel';
 import ProdutosDestaque from './components/ProdutosDestaque';
 import CategoriasDestaque from './components/CategoriasDestaque';
-import styles from './page.module.css';
 
 export default function Home() {
   return (
-    <div className={styles.main}>
-      <div className={styles.container}>
+    <div className="min-h-screen py-8">
+      <div className="container mx-auto px-4">
         <section className="mb-10">
           <BannerCarrossel />
         </section>

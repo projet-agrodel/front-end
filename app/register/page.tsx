@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { AnimatePresence } from 'framer-motion';
+import PasswordCriteriaPopup from './PasswordCriteriaPopup';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
@@ -13,21 +15,50 @@ const RegisterPage = () => {
   const [success, setSuccess] = useState('');
   const router = useRouter();
 
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const [passwordCriteria, setPasswordCriteria] = useState({
+    minLength: false,
+    uppercase: false,
+    number: false,
+  });
+  const [allCriteriaMet, setAllCriteriaMet] = useState(false);
+
+  const validatePassword = (pass: string) => {
+    const minLength = pass.length >= 8;
+    const uppercase = /[A-Z]/.test(pass);
+    const number = /[0-9]/.test(pass);
+    setPasswordCriteria({ minLength, uppercase, number });
+    return minLength && uppercase && number;
+  };
+
+  useEffect(() => {
+    setAllCriteriaMet(validatePassword(password));
+  }, [password]);
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (!allCriteriaMet) {
+        setError('A senha não atende a todos os critérios.');
+        return;
+    }
 
     if (password !== confirmPassword) {
       setError('As senhas não coincidem.');
       return;
     }
 
-    if (!name || !email || !password) {
-      setError('Todos os campos são obrigatórios.');
-      return;
+    if (!name || !email) {
+        setError('Nome e email são obrigatórios.');
+        return;
     }
-
+    
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
         const existingUser = JSON.parse(storedUser);
@@ -74,7 +105,7 @@ const RegisterPage = () => {
                 name="name"
                 type="text"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
                 placeholder="Nome Completo"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -90,13 +121,13 @@ const RegisterPage = () => {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            <div>
+            <div className="relative">
               <label htmlFor="password" className="sr-only">
                 Senha
               </label>
@@ -106,11 +137,16 @@ const RegisterPage = () => {
                 type="password"
                 autoComplete="new-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
                 placeholder="Senha"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
+                onFocus={() => setIsPasswordFocused(true)}
+                onBlur={() => setIsPasswordFocused(false)}
               />
+              <AnimatePresence>
+                {isPasswordFocused && <PasswordCriteriaPopup criteria={passwordCriteria} />}
+              </AnimatePresence>
             </div>
             <div>
               <label htmlFor="confirm-password" className="sr-only">
@@ -122,10 +158,11 @@ const RegisterPage = () => {
                 type="password"
                 autoComplete="new-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
                 placeholder="Confirmar Senha"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={!allCriteriaMet}
               />
             </div>
           </div>
@@ -141,8 +178,8 @@ const RegisterPage = () => {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-              disabled={!!success}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!allCriteriaMet || !!success || password !== confirmPassword}
             >
               Registrar
             </button>

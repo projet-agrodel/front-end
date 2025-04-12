@@ -33,14 +33,16 @@ const Navbar = () => {
     <nav className="bg-white shadow-md">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
+          <div className="flex items-center mt-4">
             <Link href="/" className="flex-shrink-0 flex items-center">
               <Image 
-                src="/images/agrodel_logo.png"
+                src="/images/logo/agrodel_logo.png"
                 alt="Logo Agrodel"
-                width={120}
-                height={40}
-                className="h-10 w-auto"
+                width={100}
+                height={50}
+                className="h-20 w-auto object-contain transition-transform duration-300 ease-in-out hover:scale-110"
+                priority
+                unoptimized
               />
             </Link>
           </div>
