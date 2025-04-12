@@ -80,7 +80,7 @@ const ProdutosDestaque = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {produtosDestaque.map((produto) => (
-        <Link href={`/Produtos?id=${produto.id}`} key={produto.id}>
+        <Link href={`/produtos?id=${produto.id}`} key={produto.id}>
           <div className="bg-white p-4 rounded-lg shadow-md transition-all hover:shadow-lg">
             <div className="h-40 bg-gray-200 rounded-md mb-4 flex items-center justify-center">
               {produto.imagem ? (

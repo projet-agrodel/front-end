@@ -36,7 +36,7 @@ const Navbar = () => {
           <div className="flex items-center mt-4">
             <Link href="/" className="flex-shrink-0 flex items-center">
               <Image 
-                src="/images/logo/agrodel_logo.png"
+                src="/images/agrodel_logo.png"
                 alt="Logo Agrodel"
                 width={100}
                 height={50}
@@ -61,7 +61,7 @@ const Navbar = () => {
               </Link>
               
               <Link 
-                href='/Produtos'
+                href='/produtos'
                 className={`px-3 py-2 rounded-md text-sm font-medium ${
                   pathname.startsWith('/Produtos') 
                     ? 'bg-green-500 text-white' 

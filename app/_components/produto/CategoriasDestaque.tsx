@@ -41,7 +41,7 @@ const CategoriasDestaque = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {categoriasMock.map((categoria) => (
-        <Link href={`/Produtos?categoria=${categoria.nome}`} key={categoria.id}>
+        <Link href={`/produtos?categoria=${categoria.nome}`} key={categoria.id}>
           <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105">
             <div className="h-32 bg-gradient-to-r from-green-400 to-green-600 flex items-center justify-center">
               {categoria.imagem ? (
