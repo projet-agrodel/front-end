@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Tab } from '../components/profile/types';
-import { ProfileHeader } from '../components/profile/ProfileHeader';
-import { TabNavigation } from '../components/profile/TabNavigation';
-import { PersonalInfo } from '../components/profile/tabs/PersonalInfo';
-import { Cards } from '../components/profile/tabs/Cards';
-import { Comments } from '../components/profile/tabs/Comments';
+import { User, Tab } from '../_components/profile/types';
+import { ProfileHeader } from '../_components/profile/ProfileHeader';
+import { TabNavigation } from '../_components/profile/TabNavigation';
+import { PersonalInfo } from '../_components/profile/tabs/PersonalInfo';
+import { Cards } from '../_components/profile/tabs/Cards';
+import { Comments } from '../_components/profile/tabs/Comments';
 
 const fetchUserData = async (): Promise<User> => {
   return {
