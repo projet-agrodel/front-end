@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "./_components/navebar/NaveBar";
+import Footer from "./_components/Footer";
+import { CartProvider } from "@/contexts/CartContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,15 +30,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 flex flex-col min-h-screen`}
       >
-        <Navbar />
-        {children}
-        <footer className="bg-green-800 text-white py-8 mt-auto">
-          <div className="container mx-auto px-4 text-center">
-            <p>© {new Date().getFullYear()} Agrodel - Todos os direitos reservados</p>
-          </div>
-        </footer>
+        <CartProvider>
+          <Navbar />
+          <main className="flex-grow">
+            {children}
+          </main>
+          <Footer />
+        </CartProvider>
       </body>
-
     </html>
   );
 }

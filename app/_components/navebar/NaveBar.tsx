@@ -4,12 +4,15 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useCart } from '@/contexts/CartContext';
+import { ShoppingCartIcon } from 'lucide-react';
 
 const Navbar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState('');
+  const { totalItems } = useCart();
 
   useEffect(() => {
     const loggedInStatus = sessionStorage.getItem('isLoggedIn');
@@ -63,7 +66,7 @@ const Navbar = () => {
               <Link 
                 href='/produtos'
                 className={`px-3 py-2 rounded-md text-sm font-medium ${
-                  pathname.startsWith('/Produtos') 
+                  pathname.startsWith('/produtos') 
                     ? 'bg-green-500 text-white' 
                     : 'text-gray-700 hover:bg-green-100'
                 }`}
@@ -109,9 +112,29 @@ const Navbar = () => {
                 </Link>
               </>
             )}
+
+            {/* Ícone do Carrinho */}
+            <Link href="/carrinho" className="relative text-gray-600 hover:text-green-600 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200">
+              <ShoppingCartIcon className="h-6 w-6" />
+              {totalItems > 0 && (
+                <span className="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                  {totalItems}
+                </span>
+              )}
+            </Link>
           </div>
           
           <div className="md:hidden flex items-center">
+            {/* Ícone do Carrinho (Mobile) */}
+            <Link href="/carrinho" className="relative text-gray-600 hover:text-green-600 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 mr-2">
+              <ShoppingCartIcon className="h-6 w-6" />
+              {totalItems > 0 && (
+                <span className="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                  {totalItems}
+                </span>
+              )}
+            </Link>
+
             {/* Mobile Auth Links/Button */} 
              {isLoggedIn ? (
                <button

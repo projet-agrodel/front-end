@@ -2,121 +2,178 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import CardProduto, { Produto } from './CardProduto';
+import CardProduto from './CardProduto';
 import BuscarProdutos from './BuscarProdutos';
-import { getFilteredProducts } from './services/searchService';
+import { Produto } from '@/services/interfaces/interfaces';
 
 // Dados fictícios (Deverá ser substituído por chamadas de API depois).
 const produtosMock: Produto[] = [
   {
     id: 1,
-    nome: 'Fertilizante Orgânico',
-    preco: 45.99,
-    descricao: 'Fertilizante orgânico de alta qualidade para todos os tipos de plantas.',
-    imagem: '',
-    categoria: 'Fertilizantes',
-    estoque: 50
+    name: 'Fertilizante Orgânico',
+    price: 45.99,
+    description: 'Fertilizante orgânico de alta qualidade para todos os tipos de plantas.',
+    img: '/img/produtos/fertilizante-organico.jpg',
+    stock: 50,
+    created_at: '',
+    updated_at: '',
+    category: { id: 1, name: 'Fertilizantes', created_at: '', updated_at: '' }
   },
   {
     id: 2,
-    nome: 'Semente de Alface',
-    preco: 12.50,
-    descricao: 'Sementes de alface crespa de alta germinação, pacote com 100 unidades.',
-    imagem: '',
-    categoria: 'Sementes',
-    estoque: 120
+    name: 'Semente de Alface',
+    price: 12.50,
+    description: 'Sementes de alface crespa de alta germinação, pacote com 100 unidades.',
+    img: '/img/produtos/semente-alface.jpg',
+    stock: 120,
+    created_at: '',
+    updated_at: '',
+    category: { id: 2, name: 'Sementes', created_at: '', updated_at: '' }
   },
   {
     id: 3,
-    nome: 'Regador Manual 5L',
-    preco: 29.90,
-    descricao: 'Regador manual com capacidade para 5 litros, ideal para jardins e hortas.',
-    imagem: '',
-    categoria: 'Ferramentas',
-    estoque: 35
+    name: 'Regador Manual 5L',
+    price: 29.90,
+    description: 'Regador manual com capacidade para 5 litros, ideal para jardins e hortas.',
+    img: '/img/produtos/regador-manual.jpg',
+    stock: 35,
+    created_at: '',
+    updated_at: '',
+    category: { id: 3, name: 'Ferramentas', created_at: '', updated_at: '' }
   },
   {
     id: 4,
-    nome: 'Herbicida Natural',
-    preco: 38.75,
-    descricao: 'Herbicida natural à base de extratos vegetais, não agride o meio ambiente.',
-    imagem: '',
-    categoria: 'Defensivos',
-    estoque: 45
+    name: 'Herbicida Natural',
+    price: 38.75,
+    description: 'Herbicida natural à base de extratos vegetais, não agride o meio ambiente.',
+    img: '/img/produtos/herbicida-natural.jpg',
+    stock: 45,
+    created_at: '',
+    updated_at: '',
+    category: { id: 4, name: 'Defensivos', created_at: '', updated_at: '' }
   },
   {
     id: 5,
-    nome: 'Substrato para Plantas',
-    preco: 18.99,
-    descricao: 'Substrato de alta qualidade para vasos e jardins, embalagem de 5kg.',
-    imagem: '',
-    categoria: 'Substratos',
-    estoque: 80
+    name: 'Substrato para Plantas',
+    price: 18.99,
+    description: 'Substrato de alta qualidade para vasos e jardins, embalagem de 5kg.',
+    img: '/img/produtos/substrato-plantas.jpg',
+    stock: 80,
+    created_at: '',
+    updated_at: '',
+    category: { id: 5, name: 'Substratos', created_at: '', updated_at: '' }
   },
   {
     id: 6,
-    nome: 'Kit Ferramentas de Jardim',
-    preco: 89.90,
-    descricao: 'Kit completo com 5 ferramentas essenciais para jardinagem.',
-    imagem: '',
-    categoria: 'Ferramentas',
-    estoque: 25
+    name: 'Kit Ferramentas de Jardim',
+    price: 89.90,
+    description: 'Kit completo com 5 ferramentas essenciais para jardinagem.',
+    img: '/img/produtos/kit-ferramentas.jpg',
+    stock: 25,
+    created_at: '',
+    updated_at: '',
+    category: { id: 3, name: 'Ferramentas', created_at: '', updated_at: '' }
   },
   {
     id: 7,
-    nome: 'Fertilizante NPK 10-10-10',
-    preco: 52.80,
-    descricao: 'Fertilizante mineral balanceado para desenvolvimento completo das plantas.',
-    imagem: '',
-    categoria: 'Fertilizantes',
-    estoque: 65
+    name: 'Fertilizante NPK 10-10-10',
+    price: 52.80,
+    description: 'Fertilizante mineral balanceado para desenvolvimento completo das plantas.',
+    img: '/img/produtos/fertilizante-npk.jpg',
+    stock: 65,
+    created_at: '',
+    updated_at: '',
+    category: { id: 1, name: 'Fertilizantes', created_at: '', updated_at: '' }
   },
   {
     id: 8,
-    nome: 'Sementes de Tomate Cereja',
-    preco: 15.99,
-    descricao: 'Sementes selecionadas de tomate cereja, alta produtividade.',
-    imagem: '',
-    categoria: 'Sementes',
-    estoque: 90
+    name: 'Sementes de Tomate Cereja',
+    price: 15.99,
+    description: 'Sementes selecionadas de tomate cereja, alta produtividade.',
+    img: '/img/produtos/semente-tomate.jpg',
+    stock: 90,
+    created_at: '',
+    updated_at: '',
+    category: { id: 2, name: 'Sementes', created_at: '', updated_at: '' }
   },
   {
     id: 9,
-    nome: 'Pulverizador 2L',
-    preco: 35.50,
-    descricao: 'Pulverizador manual com capacidade de 2 litros para aplicação de defensivos.',
-    imagem: '',
-    categoria: 'Ferramentas',
-    estoque: 40
+    name: 'Pulverizador 2L',
+    price: 35.50,
+    description: 'Pulverizador manual com capacidade de 2 litros para aplicação de defensivos.',
+    img: '/img/produtos/pulverizador.jpg',
+    stock: 40,
+    created_at: '',
+    updated_at: '',
+    category: { id: 3, name: 'Ferramentas', created_at: '', updated_at: '' }
   },
   {
     id: 10,
-    nome: 'Inseticida Biológico',
-    preco: 42.99,
-    descricao: 'Inseticida à base de Bacillus thuringiensis, controle biológico de pragas.',
-    imagem: '',
-    categoria: 'Defensivos',
-    estoque: 30
+    name: 'Inseticida Biológico',
+    price: 42.99,
+    description: 'Inseticida à base de Bacillus thuringiensis, controle biológico de pragas.',
+    img: '/img/produtos/inseticida-biologico.jpg',
+    stock: 30,
+    created_at: '',
+    updated_at: '',
+    category: { id: 4, name: 'Defensivos', created_at: '', updated_at: '' }
   },
   {
     id: 11,
-    nome: 'Substrato para Cactos',
-    preco: 22.50,
-    descricao: 'Substrato especial para cactos e suculentas, drenagem ideal.',
-    imagem: '',
-    categoria: 'Substratos',
-    estoque: 55
+    name: 'Substrato para Cactos',
+    price: 22.50,
+    description: 'Substrato especial para cactos e suculentas, drenagem ideal.',
+    img: '/img/produtos/substrato-cactos.jpg',
+    stock: 55,
+    created_at: '',
+    updated_at: '',
+    category: { id: 5, name: 'Substratos', created_at: '', updated_at: '' }
   },
   {
     id: 12,
-    nome: 'Pá de Jardinagem',
-    preco: 18.75,
-    descricao: 'Pá de jardinagem com cabo ergonômico, ideal para transplantes.',
-    imagem: '',
-    categoria: 'Ferramentas',
-    estoque: 60
+    name: 'Pá de Jardinagem',
+    price: 18.75,
+    description: 'Pá de jardinagem com cabo ergonômico, ideal para transplantes.',
+    img: '/img/produtos/pa-jardinagem.jpg',
+    stock: 60,
+    created_at: '',
+    updated_at: '',
+    category: { id: 3, name: 'Ferramentas', created_at: '', updated_at: '' }
   }
 ];
+
+// Serviço de busca local - substitua por API no futuro
+const filterByCategory = (produtos: Produto[], categoryName: string | null): Produto[] => {
+  if (!categoryName) return produtos;
+  return produtos.filter(p => p.category?.name === categoryName);
+};
+
+const searchProducts = (produtos: Produto[], termo: string): Produto[] => {
+  if (!termo.trim()) return produtos;
+  const termLower = termo.toLowerCase();
+  return produtos.filter(p => 
+    p.name.toLowerCase().includes(termLower) || 
+    p.description.toLowerCase().includes(termLower)
+  );
+};
+
+const getFilteredProducts = (
+  produtos: Produto[], 
+  termo: string | null, 
+  categoryName: string | null
+): Produto[] => {
+  let result = [...produtos];
+  
+  if (categoryName) {
+    result = filterByCategory(result, categoryName);
+  }
+  
+  if (termo && termo.trim()) {
+    result = searchProducts(result, termo);
+  }
+  
+  return result;
+};
 
 const ListarProdutos = () => {
   const router = useRouter();
@@ -128,17 +185,17 @@ const ListarProdutos = () => {
   const [error, setError] = useState<string | null>(null);
   
   // Obter parâmetros da URL
-  const filtroCategoria = searchParams.get('categoria');
+  const filterCategory = searchParams.get('category');
   const termoBusca = searchParams.get('q') || '';
   
   // Função para atualizar apenas o parâmetro de categoria na URL
-  const updateCategoryParam = (categoria: string | null) => {
+  const updateCategoryParam = (category: string | null) => {
     const newParams = new URLSearchParams(searchParams.toString());
     
-    if (categoria) {
-      newParams.set('categoria', categoria);
+    if (category) {
+      newParams.set('category', category);
     } else {
-      newParams.delete('categoria');
+      newParams.delete('category');
     }
     
     // Construir a nova URL
@@ -156,7 +213,7 @@ const ListarProdutos = () => {
           const produtosFiltrados = getFilteredProducts(
             produtosMock,
             termoBusca,
-            filtroCategoria
+            filterCategory
           );
           
           setProdutos(produtosFiltrados);
@@ -170,14 +227,14 @@ const ListarProdutos = () => {
     };
 
     fetchProdutos();
-  }, [termoBusca, filtroCategoria]);
+  }, [termoBusca, filterCategory]);
 
   // Categorias únicas para o filtro
-  const categorias = Array.from(new Set(produtosMock.map(p => p.categoria)));
+  const categories = Array.from(new Set(produtosMock.map(p => p.category?.name))).filter(Boolean) as string[];
 
   // Handler para filtro de categoria
-  const handleCategoryChange = (categoria: string | null) => {
-    updateCategoryParam(categoria);
+  const handleCategoryChange = (category: string | null) => {
+    updateCategoryParam(category);
   };
 
   return (
@@ -192,21 +249,21 @@ const ListarProdutos = () => {
         <button
           onClick={() => handleCategoryChange(null)}
           className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-            !filtroCategoria ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
+            !filterCategory ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
           }`}
         >
           Todos
         </button>
         
-        {categorias.map((categoria) => (
+        {categories.map((category) => (
           <button
-            key={categoria}
-            onClick={() => handleCategoryChange(categoria)}
+            key={category}
+            onClick={() => handleCategoryChange(category)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              filtroCategoria === categoria ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
+              filterCategory === category ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
             }`}
           >
-            {categoria}
+            {category}
           </button>
         ))}
       </div>
@@ -234,13 +291,8 @@ const ListarProdutos = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {produtos.map((produto, index) => (
-              <div 
-                key={produto.id}
-                className={`opacity-0 animate-fade-in-up delay-${Math.min(index, 15)}`}
-              >
-                <CardProduto produto={produto} />
-              </div>
+            {produtos.map((produto) => (
+              <CardProduto key={produto.id} produto={produto} />
             ))}
           </div>
         )}

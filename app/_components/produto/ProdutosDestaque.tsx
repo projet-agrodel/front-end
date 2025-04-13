@@ -2,45 +2,53 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Produto } from './CardProduto';
+import { Produto } from '@/services/interfaces/interfaces';
 
 // Produtos em destaque simulados (pode ser substituído por API futura)
 const produtosDestaqueMock: Produto[] = [
   {
     id: 1,
-    nome: 'Fertilizante Orgânico',
-    preco: 45.99,
-    descricao: 'Fertilizante orgânico de alta qualidade para todos os tipos de plantas.',
-    imagem: '',
-    categoria: 'Fertilizantes',
-    estoque: 50
+    name: 'Fertilizante Orgânico',
+    price: 45.99,
+    description: 'Fertilizante orgânico de alta qualidade para todos os tipos de plantas.',
+    img: '',
+    category: { name: 'Fertilizantes', id: 1, created_at: '', updated_at: '' },
+    stock: 50,
+    created_at: '',
+    updated_at: ''
   },
   {
     id: 5,
-    nome: 'Substrato para Plantas',
-    preco: 18.99,
-    descricao: 'Substrato de alta qualidade para vasos e jardins, embalagem de 5kg.',
-    imagem: '',
-    categoria: 'Substratos',
-    estoque: 80
+    name: 'Substrato para Plantas',
+    price: 18.99,
+    description: 'Substrato de alta qualidade para vasos e jardins, embalagem de 5kg.',
+    img: '',
+    category: { name: 'Substratos', id: 1, created_at: '', updated_at: '' },
+    stock: 80,
+    created_at: '',
+    updated_at: ''
   },
   {
     id: 6,
-    nome: 'Kit Ferramentas de Jardim',
-    preco: 89.90,
-    descricao: 'Kit completo com 5 ferramentas essenciais para jardinagem.',
-    imagem: '',
-    categoria: 'Ferramentas',
-    estoque: 25
+    name: 'Kit Ferramentas de Jardim',
+    price: 89.90,
+    description: 'Kit completo com 5 ferramentas essenciais para jardinagem.',
+    img: '',
+    category: { name: 'Ferramentas', id: 1, created_at: '', updated_at: '' },
+    stock: 25,
+    created_at: '',
+    updated_at: ''
   },
   {
     id: 8,
-    nome: 'Sementes de Tomate Cereja',
-    preco: 15.99,
-    descricao: 'Sementes selecionadas de tomate cereja, alta produtividade.',
-    imagem: '',
-    categoria: 'Sementes',
-    estoque: 90
+    name: 'Sementes de Tomate Cereja',
+    price: 15.99,
+    description: 'Sementes selecionadas de tomate cereja, alta produtividade.',
+    img: '',
+    category: { name: 'Sementes', id: 1, created_at: '', updated_at: '' },
+    stock: 90,
+    created_at: '',
+    updated_at: ''
   }
 ];
 
@@ -80,23 +88,23 @@ const ProdutosDestaque = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {produtosDestaque.map((produto) => (
-        <Link href={`/produtos?id=${produto.id}`} key={produto.id}>
+        <Link href={`/produtos/${produto.id}`} key={produto.id}>
           <div className="bg-white p-4 rounded-lg shadow-md transition-all hover:shadow-lg">
             <div className="h-40 bg-gray-200 rounded-md mb-4 flex items-center justify-center">
-              {produto.imagem ? (
+              {produto.img ? (
                 <img 
-                  src={produto.imagem} 
-                  alt={produto.nome} 
+                  src={produto.img} 
+                  alt={produto.name} 
                   className="h-full w-full object-cover rounded-md"
                 />
               ) : (
-                <span className="text-gray-400">Imagem indisponível</span>
+                <span className="text-gray-400">img indisponível</span>
               )}
             </div>
-            <h3 className="text-lg font-medium text-gray-800 mb-1">{produto.nome}</h3>
-            <p className="text-green-600 font-bold mb-2">R$ {produto.preco.toFixed(2)}</p>
+            <h3 className="text-lg font-medium text-gray-800 mb-1">{produto.name}</h3>
+            <p className="text-green-600 font-bold mb-2">R$ {produto.price.toFixed(2)}</p>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500">{produto.categoria}</span>
+              <span className="text-sm text-gray-500">{produto.category?.name}</span>
               <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
                 Destaque
               </span>
