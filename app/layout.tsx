@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/app/components/Navbar";
+import { CartProvider } from "./context/CartContext";
 // No longer import PageTransition here
 
 const geistSans = Geist({
@@ -30,16 +31,18 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 flex flex-col min-h-screen`}
       >
-        <Navbar />
-        {/* Main content area - children will be wrapped by template.tsx */}
-        <main className="pt-1 flex-grow flex flex-col">
-           {children} {/* Render children directly. Template will wrap this. */}
-        </main>
-        <footer className="bg-green-800 text-white py-8 mt-auto">
-          <div className="container mx-auto px-4 text-center">
-            <p>© {new Date().getFullYear()} Agrodel - Todos os direitos reservados</p>
-          </div>
-        </footer>
+        <CartProvider>
+          <Navbar />
+          {/* Main content area - children will be wrapped by template.tsx */}
+          <main className="pt-1 flex-grow flex flex-col">
+             {children} {/* Render children directly. Template will wrap this. */}
+          </main>
+          <footer className="bg-green-800 text-white py-8 mt-auto">
+            <div className="container mx-auto px-4 text-center">
+              <p>© {new Date().getFullYear()} Agrodel - Todos os direitos reservados</p>
+            </div>
+          </footer>
+        </CartProvider>
       </body>
     </html>
   );

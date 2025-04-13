@@ -1,4 +1,7 @@
+"use client";
+
 import Link from 'next/link';
+import { useCart } from '@/app/context/CartContext';
 
 // Define the product interface
 export interface Produto {
@@ -30,7 +33,13 @@ const getCategoryColor = (categoria: string): string => {
 
 const CardProduto = ({ produto }: CardProdutoProps) => {
   const categoryColor = getCategoryColor(produto.categoria);
-  
+  const { addToCart } = useCart();
+
+  const handleAddToCart = () => {
+    addToCart(produto);
+    console.log(`${produto.nome} adicionado ao carrinho`);
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:shadow-lg hover:scale-[1.02]">
       <div className={`relative w-full h-48 flex items-center justify-center ${categoryColor}`}>
@@ -48,7 +57,7 @@ const CardProduto = ({ produto }: CardProdutoProps) => {
           
           <button 
             className="bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded-3xl text-xt transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
-            onClick={() => console.log(`Adicionar produto ${produto.id} ao carrinho`)}
+            onClick={handleAddToCart}
           >
             Adicionar
           </button>
