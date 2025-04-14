@@ -3,6 +3,8 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/app/_components/ui/
 import { Badge } from '@/app/_components/ui/badge';
 import { Button } from '@/app/_components/ui/button';
 import { Ticket } from '@/services/interfaces/interfaces';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const priorityColors = {
   Baixa: 'bg-blue-100 text-blue-800',
@@ -28,7 +30,9 @@ export function TicketCard({ ticket, onClick, onStatusChange }: TicketCardProps)
   const priorityClass = priorityColors[ticket.priority || 'Média'];
   const statusClass = statusColors[ticket.status || 'Aberto'];
   
-  const timeAgo = ticket.created_at 
+  const timeAgo = ticket.created_at
+    ? formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true, locale: ptBR })
+    : 'Data indisponível';
 
   return (
     <Card className="w-full hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>

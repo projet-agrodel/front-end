@@ -182,7 +182,7 @@ export default function DetalhesProduto() {
   const handleAdicionarAoCarrinho = () => {
     if (!produto) return;
     
-    useCartContext.addToCart(produto)
+    useCartContext.addToCart(produto, quantidade);
     
     setAdicionadoAoCarrinho(true);
     setTimeout(() => {

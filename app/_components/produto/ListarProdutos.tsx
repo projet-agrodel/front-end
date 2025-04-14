@@ -291,8 +291,10 @@ const ListarProdutos = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {produtos.map((produto) => (
-              <CardProduto key={produto.id} produto={produto} />
+            {produtos.map((produto, index) => (
+              <div key={produto.id} className={`animate-fade-in-up delay-${Math.min(index, 15)} opacity-0`} style={{ animationFillMode: 'forwards' }}>
+                <CardProduto produto={produto} />
+              </div>
             ))}
           </div>
         )}

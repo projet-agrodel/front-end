@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -80,26 +80,61 @@ const mockMessages = [
 ] as TicketMessage[];
 
 export default function TicketDetailPage({ params }: { params: { id: string } }) {
-  const resolvedParams = use(Promise.resolve(params)) 
-  const ticketId = parseInt(resolvedParams.id);
+  // Extrai e converte o ID diretamente dos params
+  const ticketId = parseInt(params.id, 10); // Adiciona radix 10 para segurança
+
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [messages, setMessages] = useState<TicketMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter(); // Adiciona se for necessário para navegação programática
 
   useEffect(() => {
-    // Em um ambiente real, isso seria uma chamada de API
-    const foundTicket = mockTickets.find(t => t.id === ticketId);
-    if (foundTicket) {
-      setTicket(foundTicket as Ticket);
-      
-      // Filtrar mensagens para este ticket
-      const ticketMessages = mockMessages.filter(m => m.ticket_id === ticketId);
-      setMessages(ticketMessages);
+    if (isNaN(ticketId)) {
+      // Se o ID não for um número válido, redireciona ou mostra notFound
+      console.error("ID de ticket inválido:", params.id);
+      return notFound(); // Ou router.push('/tickets') ou outra lógica
     }
-  }, [ticketId]);
 
+    // Simulação de busca de dados (API ou mock)
+    setIsLoading(true); // Inicia o carregamento
+    console.log("Buscando ticket com ID:", ticketId);
+
+    // Simula atraso da API
+    const timer = setTimeout(() => {
+      const foundTicket = mockTickets.find(t => t.id === ticketId);
+      console.log("Ticket encontrado:", foundTicket);
+
+      if (foundTicket) {
+        setTicket(foundTicket); // Define como Ticket, não precisa de 'as Ticket'
+        const ticketMessages = mockMessages.filter(m => m.ticket_id === ticketId);
+        setMessages(ticketMessages);
+      } else {
+        // Se não encontrou o ticket após a busca (mesmo com ID válido)
+        console.log("Ticket não encontrado no mock após busca.");
+        notFound();
+      }
+      setIsLoading(false); // Finaliza o carregamento
+    }, 500); // Simula 500ms de delay
+
+    return () => clearTimeout(timer); // Limpa o timeout se o componente desmontar
+
+  }, [params.id]); // Depende de params.id para re-executar se o ID mudar
+
+  // Adiciona um estado de carregamento inicial
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 text-center">
+        <p>Carregando detalhes do ticket...</p>
+        {/* Pode adicionar um spinner aqui */}
+      </div>
+    );
+  }
+
+  // Se não está carregando e o ticket não foi encontrado (após a busca no useEffect)
   if (!ticket) {
-    return notFound();
+     // O notFound() já deve ter sido chamado no useEffect se o ID era inválido ou não foi encontrado.
+     // Pode retornar null ou um placeholder se preferir, mas notFound é mais semântico.
+    return null; 
   }
 
   const handleStatusChange = (ticketId: number, newStatus: 'Aberto' | 'Em Andamento' | 'Resolvido' | 'Fechado') => {
@@ -113,15 +148,6 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
   const handleSendMessage = async (ticketId: number, message: string) => {
     try {
       setIsLoading(true);
-      
-      // Em um ambiente real, isso seria uma chamada de API
-      // const response = await fetch(`/api/tickets/${ticketId}/messages`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({ message }),
-      // });
       
       // Simular atraso para demonstração
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -138,7 +164,6 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
       setMessages(prev => [...prev, newMessage]);
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
-      // Implementar notificação de erro aqui
     } finally {
       setIsLoading(false);
     }

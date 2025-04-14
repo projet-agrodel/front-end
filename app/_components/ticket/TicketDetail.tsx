@@ -4,6 +4,8 @@ import { Textarea } from '@/app/_components/ui/textarea';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/app/_components/ui/card';
 import { Badge } from '@/app/_components/ui/badge';
 import { Ticket, TicketMessage } from '@/services/interfaces/interfaces';
+import { format, formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const priorityColors = {
   Baixa: 'bg-blue-100 text-blue-800',
@@ -47,6 +49,10 @@ export function TicketDetail({
   const priorityClass = priorityColors[ticket.priority || 'Média'];
   const statusClass = statusColors[ticket.status || 'Aberto'];
 
+  const openedDateFormatted = ticket.created_at
+    ? format(new Date(ticket.created_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
+    : 'Data indisponível';
+
   return (
     <div className="space-y-6">
       <Card>
@@ -59,7 +65,7 @@ export function TicketDetail({
             </div>
           </div>
           <p className="text-sm text-gray-500">
-            Aberto {ticket.created_at}
+            Aberto em {openedDateFormatted}
           </p>
         </CardHeader>
         <CardContent>
@@ -111,20 +117,26 @@ export function TicketDetail({
         <h3 className="text-lg font-medium">Histórico de Mensagens</h3>
         <div className="space-y-4">
           {messages.length > 0 ? (
-            messages.map((msg) => (
-              <div 
-                key={msg.id} 
-                className="p-4 bg-gray-50 rounded-lg"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <p className="font-medium">{msg.user_id ? `Usuário #${msg.user_id}` : 'Sistema'}</p>
-                  <p className="text-sm text-gray-500">
-                    {msg.created_at}
-                  </p>
+            messages.map((msg) => {
+              const messageTimeAgo = msg.created_at
+                ? formatDistanceToNow(new Date(msg.created_at), { addSuffix: true, locale: ptBR })
+                : 'Data indisponível';
+              
+              return (
+                <div 
+                  key={msg.id} 
+                  className="p-4 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="font-medium">{msg.user_id ? `Usuário #${msg.user_id}` : 'Suporte'}</p>
+                    <p className="text-sm text-gray-500">
+                      {messageTimeAgo}
+                    </p>
+                  </div>
+                  <p className="whitespace-pre-line">{msg.message}</p>
                 </div>
-                <p className="whitespace-pre-line">{msg.message}</p>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="text-center py-8 border border-dashed rounded-lg">
               <p className="text-gray-500">Nenhuma mensagem neste ticket</p>
