@@ -3,28 +3,39 @@
 import React from 'react';
 import Link from 'next/link';
 import { useCart } from '@/contexts/CartContext';
+import { CarrinhoItem } from '@/services/interfaces/interfaces'; // Importa a interface
  
- const CartItemDisplay: React.FC<{ item: any, updateQuantity: Function, removeFromCart: Function }> = ({ item, updateQuantity, removeFromCart }) => (
+ // Melhora a tipagem do componente
+ const CartItemDisplay: React.FC<{ 
+   item: CarrinhoItem; 
+   updateQuantity: (productId: number, quantity: number) => void; 
+   removeFromCart: (productId: number) => void; 
+ }> = ({ item, updateQuantity, removeFromCart }) => (
    <div className="flex items-center justify-between border-b border-gray-200 py-4">
      <div className="flex items-center space-x-4">
-       {/* Placeholder para imagem do produto - substitua pela imagem real se disponível */}
+       {/* Placeholder para imagem do produto */}
        <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-gray-500">
           Img
        </div>
        <div>
-         <h3 className="text-lg font-semibold text-gray-800">{item.nome}</h3>
-         <p className="text-sm text-gray-500">{item.categoria}</p>
+         {/* Acessa os dados através de item.produto usando os nomes corretos */}
+         <h3 className="text-lg font-semibold text-gray-800">{item.produto?.name || 'Nome Indisponível'}</h3>
+         {/* Acessa o nome da categoria corretamente */}
+         <p className="text-sm text-gray-500">{item.produto?.category?.name || 'Categoria Indisponível'}</p>
          <p className="text-green-600 font-semibold">
-           R$ {item?.preco?.toFixed(2).replace('.', ',')}
+           {/* Usa item.produto.price */}
+           R$ {item.produto?.price?.toFixed(2).replace('.', ',') || 'Preço Indisponível'}
          </p>
        </div>
      </div>
      <div className="flex items-center space-x-4">
        <div className="flex items-center border border-gray-300 rounded">
          <button
-           onClick={() => updateQuantity(item.id, item.quantity - 1)}
+           // Passa item.produto_id
+           onClick={() => updateQuantity(item.produto_id, item.quantity - 1)}
            className="px-3 py-1 text-gray-700 hover:bg-gray-100 rounded-l transition-colors duration-200"
            aria-label="Diminuir quantidade"
+           disabled={item.quantity <= 1} // Desabilita se a quantidade for 1
          >
            -
          </button>
@@ -32,7 +43,8 @@ import { useCart } from '@/contexts/CartContext';
            {item.quantity}
          </span>
          <button
-           onClick={() => updateQuantity(item.id, item.quantity + 1)}
+           // Passa item.produto_id
+           onClick={() => updateQuantity(item.produto_id, item.quantity + 1)}
            className="px-3 py-1 text-gray-700 hover:bg-gray-100 rounded-r transition-colors duration-200"
            aria-label="Aumentar quantidade"
          >
@@ -40,10 +52,12 @@ import { useCart } from '@/contexts/CartContext';
          </button>
        </div>
        <p className="font-semibold w-24 text-right">
-         R$ {(item.preco * item.quantity).toFixed(2).replace('.', ',')}
+         {/* Calcula subtotal usando item.produto.price */}
+         R$ {((item.produto?.price || 0) * item.quantity).toFixed(2).replace('.', ',')}
        </p>
        <button
-         onClick={() => removeFromCart(item.id)}
+         // Passa item.produto_id
+         onClick={() => removeFromCart(item.produto_id)}
          className="text-red-500 hover:text-red-700 transition-colors duration-200"
          aria-label="Remover item"
        >

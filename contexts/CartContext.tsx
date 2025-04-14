@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 // Interface para o valor do contexto do carrinho
 interface CartContextType {
   cartItems: CarrinhoItem[];
-  addToCart: (product: Produto) => void;
+  addToCart: (product: Produto, quantityToAdd?: number) => void;
   removeFromCart: (productId: number) => void;
   updateQuantity: (productId: number, quantity: number) => void;
   clearCart: () => void;
@@ -49,22 +49,30 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const addToCart = (product: Produto) => {
+  const addToCart = (product: Produto, quantityToAdd: number = 1) => {
+    // Garante que a quantidade seja pelo menos 1
+    const validQuantity = Math.max(1, quantityToAdd);
+
     setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.produto_id === product.id);
-      if (existingItem) {
-        // Se o item já existe, aumenta a quantidade
-        return prevItems.map(item =>
-          item.produto_id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-        );
+      const existingItemIndex = prevItems.findIndex(item => item.produto_id === product.id);
+
+      if (existingItemIndex > -1) {
+        // Se o item já existe, atualiza a quantidade somando a nova quantidade
+        const updatedItems = [...prevItems];
+        updatedItems[existingItemIndex] = {
+          ...updatedItems[existingItemIndex],
+          quantity: updatedItems[existingItemIndex].quantity + validQuantity
+        };
+        return updatedItems;
       } else {
-        // Se é um novo item, adiciona ao carrinho com quantidade 1
-        return [...prevItems, { 
-          produto_id: product.id, 
-          carrinho_id: carrinhoId, 
-          quantity: 1, 
-          produto: product 
-        }];
+        // Se é um novo item, adiciona ao carrinho com a quantidade especificada
+        const newItem: CarrinhoItem = {
+          produto_id: product.id,
+          carrinho_id: carrinhoId, // Usar ID real do carrinho se integrado com back-end
+          quantity: validQuantity,
+          produto: product
+        };
+        return [...prevItems, newItem];
       }
     });
   };
