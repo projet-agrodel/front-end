@@ -2,25 +2,31 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react'; // Ou use react-icons
-import Slider from 'rc-slider'; // Importa o Slider
-import 'rc-slider/assets/index.css'; // Importa o CSS do Slider
+import { X, Check, ArrowDownUp, ArrowUpNarrowWide, ArrowDownWideNarrow } from 'lucide-react';
+import Slider from 'rc-slider';
+import 'rc-slider/assets/index.css';
 
-// Atualizando a interface para receber as novas props
 interface FiltroPanelProps {
   isOpen: boolean;
   onClose: () => void;
   categories: string[];
   selectedCategory: string | null;
   onCategoryChange: (category: string | null) => void;
-  // Adicionar props para preço e disponibilidade depois
   minPrice: number;
   maxPrice: number;
   minPriceLimit: number;
   maxPriceLimit: number;
   onPriceChange: (value: number | number[]) => void;
   onClearFilters: () => void;
+  currentSortOrder: string | null;
+  onSortChange: (sortOrder: string | null) => void;
 }
+
+const sortOptions = [
+  { value: null, label: 'Padrão', icon: ArrowDownUp },
+  { value: 'price_asc', label: 'Preço: Menor para Maior', icon: ArrowUpNarrowWide },
+  { value: 'price_desc', label: 'Preço: Maior para Menor', icon: ArrowDownWideNarrow },
+];
 
 const FiltroPanel: React.FC<FiltroPanelProps> = ({ 
   isOpen, 
@@ -33,18 +39,20 @@ const FiltroPanel: React.FC<FiltroPanelProps> = ({
   minPriceLimit,
   maxPriceLimit,
   onPriceChange,
-  onClearFilters
+  onClearFilters,
+  currentSortOrder,
+  onSortChange
 }) => {
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.8, y: -10 }} // Ajuste leve na animação inicial
+          initial={{ opacity: 0, scale: 0.8, y: -10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.8, y: -10 }}
           transition={{ duration: 0.2 }}
-          style={{ transformOrigin: 'top left' }} // Definindo a origem (ajustar se necessário)
-          className="absolute z-10 mt-1 w-72 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none top-full left-0" // Posicionamento
+          style={{ transformOrigin: 'top left' }}
+          className="absolute z-10 mt-1 w-72 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none top-full left-0"
         >
           <div className="p-4">
             <div className="flex justify-between items-center mb-4">
@@ -52,16 +60,14 @@ const FiltroPanel: React.FC<FiltroPanelProps> = ({
               <button
                 type="button"
                 className="text-gray-400 hover:text-gray-500"
-                onClick={onClose} // O botão X agora usa o onClose (que vem de handleApplyFilters)
+                onClick={onClose}
               >
                 <span className="sr-only">Fechar painel de filtros</span>
                 <X className="h-6 w-6" aria-hidden="true" />
               </button>
             </div>
 
-            {/* Conteúdo dos filtros */}
-            <div className="space-y-6"> {/* Aumentei o espaçamento */}
-              {/* Filtro de Categoria */}
+            <div className="space-y-6">
               <div>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Categoria</h4>
                 <div className="flex flex-wrap gap-2">
@@ -83,52 +89,58 @@ const FiltroPanel: React.FC<FiltroPanelProps> = ({
                 </div>
               </div>
 
-              {/* Filtro de Preço */}
               <div>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Faixa de Preço</h4>
-                <div className="px-1"> {/* Pequeno padding para o slider não colar nas bordas */}
+                <div className="px-1">
                   <Slider
-                    range // Define como um slider de intervalo
-                    min={minPriceLimit} // Limite mínimo geral
-                    max={maxPriceLimit} // Limite máximo geral
-                    value={[minPrice, maxPrice]} // Valores selecionados atualmente
-                    onChange={onPriceChange} // Função chamada ao mover o slider
-                    allowCross={false} // Impede que min ultrapasse max
-                    trackStyle={[{ backgroundColor: '#10B981' }]} // Cor da faixa selecionada (Emerald 600)
+                    range
+                    min={minPriceLimit}
+                    max={maxPriceLimit}
+                    value={[minPrice, maxPrice]}
+                    onChange={onPriceChange}
+                    allowCross={false}
+                    trackStyle={[{ backgroundColor: '#10B981' }]}
                     handleStyle={[
-                      { backgroundColor: '#10B981', borderColor: '#059669', opacity: 1 }, // Cor do handle esquerdo
-                      { backgroundColor: '#10B981', borderColor: '#059669', opacity: 1 }  // Cor do handle direito
+                      { backgroundColor: '#10B981', borderColor: '#059669', opacity: 1 },
+                      { backgroundColor: '#10B981', borderColor: '#059669', opacity: 1 }
                     ]}
-                    railStyle={{ backgroundColor: '#E5E7EB' }} // Cor da faixa não selecionada (Gray 200)
+                    railStyle={{ backgroundColor: '#E5E7EB' }}
                   />
                 </div>
-                {/* Exibe os valores selecionados */}
                 <div className="flex justify-between text-xs text-gray-500 mt-2">
                   <span>R$ {minPrice.toFixed(2)}</span>
                   <span>R$ {maxPrice.toFixed(2)}</span>
                 </div>
               </div>
 
-              {/* Placeholder para Filtro de Disponibilidade */}
-              {/* 
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Disponibilidade</h4>
-                <p className="text-sm text-gray-500">Checkbox/Switch aqui...</p>
-              </div> 
-              */}
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Ordenar por</h4>
+                <div className="flex flex-col gap-2">
+                  {sortOptions.map((option) => (
+                    <button
+                      key={option.label}
+                      onClick={() => onSortChange(option.value)}
+                      className={`group flex items-center w-full px-3 py-2 text-sm rounded-md transition-colors ${currentSortOrder === option.value ? 'bg-emerald-100 text-emerald-900' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'}`}
+                    >
+                      <option.icon className="mr-3 h-5 w-5 text-gray-500" aria-hidden="true" />
+                      <span>{option.label}</span>
+                      {currentSortOrder === option.value && (
+                        <Check className="ml-auto h-5 w-5 text-emerald-600" aria-hidden="true" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Rodapé com botões */}
-            <div className="mt-6 pt-4 border-t border-gray-200 flex items-center gap-3"> 
-              {/* Botão Limpar Filtros (estilo secundário) */}
+            <div className="mt-6 pt-4 border-t border-gray-200 flex items-center gap-3">
               <button
                 type="button"
                 className="flex-1 inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 sm:text-sm"
-                onClick={onClearFilters} // Chama a função passada
+                onClick={onClearFilters}
               >
                 Limpar Filtros
               </button>
-              {/* Botão Fechar Filtros (estilo primário) */}
               <button
                 type="button"
                 className="flex-1 inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-emerald-600 text-base font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 sm:text-sm"

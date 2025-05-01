@@ -171,12 +171,25 @@ const filterByPrice = (produtos: Produto[], min: number | null, max: number | nu
   return result;
 };
 
+// Adicionar lógica de ordenação
+const sortProducts = (produtos: Produto[], sortOrder: string | null): Produto[] => {
+  const sorted = [...produtos]; // Cria cópia para não mutar o original
+  if (sortOrder === 'price_asc') {
+    sorted.sort((a, b) => a.price - b.price);
+  } else if (sortOrder === 'price_desc') {
+    sorted.sort((a, b) => b.price - a.price);
+  } 
+  // else: Nenhuma ordenação específica (mantém a ordem atual ou padrão da API)
+  return sorted;
+};
+
 const getFilteredProducts = (
   produtos: Produto[], 
   termo: string | null, 
   categoryName: string | null,
-  minPrice: number | null, // Novo parâmetro
-  maxPrice: number | null  // Novo parâmetro
+  minPrice: number | null,
+  maxPrice: number | null,
+  sortOrder: string | null // Novo parâmetro
 ): Produto[] => {
   let result = [...produtos];
   
@@ -190,9 +203,10 @@ const getFilteredProducts = (
 
   // Aplicar filtro de preço
   result = filterByPrice(result, minPrice, maxPrice);
-  
-  // Lógica de ordenação virá aqui
 
+  // Aplicar ordenação
+  result = sortProducts(result, sortOrder);
+  
   return result;
 };
 
@@ -213,13 +227,16 @@ const ListarProdutos = () => {
   // Obter parâmetros da URL
   const filterCategory = searchParams.get('category');
   const termoBusca = searchParams.get('q') || '';
-  // Obter e validar parâmetros de preço
   const urlMinPrice = searchParams.get('minPrice');
   const urlMaxPrice = searchParams.get('maxPrice');
+  const urlSortOrder = searchParams.get('sort'); // Ler parâmetro de ordenação
 
   // Estados para preço, inicializados com valores da URL ou padrão
   const [minPrice, setMinPrice] = useState<number>(urlMinPrice ? parseInt(urlMinPrice, 10) : MIN_PRICE_LIMIT);
   const [maxPrice, setMaxPrice] = useState<number>(urlMaxPrice ? parseInt(urlMaxPrice, 10) : MAX_PRICE_LIMIT);
+
+  // Estado para ordenação (inicializado pela URL)
+  const [sortOrder, setSortOrder] = useState<string | null>(urlSortOrder);
 
   // Função para atualizar os parâmetros de preço na URL
   const updatePriceParams = (newMin: number, newMax: number) => {
@@ -251,10 +268,27 @@ const ListarProdutos = () => {
     router.push(newUrl, { scroll: false });
   };
 
+  // Função para atualizar o parâmetro de ordenação na URL
+  const updateSortParam = (newSortOrder: string | null) => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    if (newSortOrder) {
+      newParams.set('sort', newSortOrder);
+    } else {
+      newParams.delete('sort');
+    }
+    // Atualiza estado local
+    setSortOrder(newSortOrder);
+    // Navega
+    const newUrl = `${pathname}?${newParams.toString()}`;
+    router.push(newUrl, { scroll: false });
+  };
+
   useEffect(() => {
     // Atualiza estados locais se URL mudar externamente
     setMinPrice(urlMinPrice ? parseInt(urlMinPrice, 10) : MIN_PRICE_LIMIT);
     setMaxPrice(urlMaxPrice ? parseInt(urlMaxPrice, 10) : MAX_PRICE_LIMIT);
+    // Atualiza estado de ordenação pela URL
+    setSortOrder(urlSortOrder);
 
     const fetchProdutos = () => {
       try {
@@ -264,8 +298,9 @@ const ListarProdutos = () => {
             produtosMock,
             termoBusca,
             filterCategory,
-            urlMinPrice ? parseInt(urlMinPrice, 10) : null, // Passa null se não estiver na URL
-            urlMaxPrice ? parseInt(urlMaxPrice, 10) : null  // Passa null se não estiver na URL
+            urlMinPrice ? parseInt(urlMinPrice, 10) : null,
+            urlMaxPrice ? parseInt(urlMaxPrice, 10) : null,
+            urlSortOrder // Passar ordenação para a função de filtro/ordenação
           );
           
           setProdutos(produtosFiltrados);
@@ -279,7 +314,7 @@ const ListarProdutos = () => {
     };
 
     fetchProdutos();
-  }, [termoBusca, filterCategory, urlMinPrice, urlMaxPrice]);
+  }, [termoBusca, filterCategory, urlMinPrice, urlMaxPrice, urlSortOrder]);
 
   // Categorias únicas para o filtro
   const categories = Array.from(new Set(produtosMock.map(p => p.category?.name))).filter(Boolean) as string[];
@@ -298,6 +333,11 @@ const ListarProdutos = () => {
     }
   };
 
+  // Handler para mudança de ordenação
+  const handleSortChange = (newSortOrder: string | null) => {
+    updateSortParam(newSortOrder);
+  };
+
   // Função para alternar a visibilidade do painel
   const toggleFilterPanel = () => {
     setIsFilterPanelOpen(prev => !prev);
@@ -308,26 +348,24 @@ const ListarProdutos = () => {
     setIsFilterPanelOpen(false);
   };
 
-  // Handler para limpar os filtros
+  // Atualiza handleClearFilters para incluir 'sort'
   const handleClearFilters = () => {
     const newParams = new URLSearchParams(searchParams.toString());
-    // Remove os parâmetros de filtro
     newParams.delete('category');
     newParams.delete('minPrice');
     newParams.delete('maxPrice');
+    newParams.delete('sort'); // Limpa a ordenação também
     
-    // Constrói a nova URL (mantendo outros parâmetros como 'q' se existirem)
     const newUrl = newParams.toString() ? `${pathname}?${newParams.toString()}` : pathname;
-    
-    // Navega e fecha o painel
     router.push(newUrl, { scroll: false });
-    setIsFilterPanelOpen(true); 
+    setIsFilterPanelOpen(false); 
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Barra de busca e botão de filtro */}
+      {/* Barra de busca, filtro e ordenação */}
       <div className="mb-8 flex justify-center items-center gap-4">
+        {/* Botão e Painel de Filtro */}
         <div className="relative">
           <button
             onClick={toggleFilterPanel}
@@ -336,7 +374,6 @@ const ListarProdutos = () => {
           >
             <SlidersHorizontal className="h-5 w-5" />
           </button>
-          {/* Passando onClearFilters para FiltroPanel */}
           <FiltroPanel 
             isOpen={isFilterPanelOpen} 
             onClose={handleApplyFilters}
@@ -349,8 +386,12 @@ const ListarProdutos = () => {
             maxPriceLimit={MAX_PRICE_LIMIT}
             onPriceChange={handlePriceChange}
             onClearFilters={handleClearFilters}
+            currentSortOrder={sortOrder}
+            onSortChange={handleSortChange}
           />
         </div>
+
+        {/* Barra de Busca */}
         <BuscarProdutos className="flex-grow max-w-xl" />
       </div>
       
