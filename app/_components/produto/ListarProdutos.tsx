@@ -321,7 +321,7 @@ const ListarProdutos = () => {
     
     // Navega e fecha o painel
     router.push(newUrl, { scroll: false });
-    setIsFilterPanelOpen(false); 
+    setIsFilterPanelOpen(true); 
   };
 
   return (
