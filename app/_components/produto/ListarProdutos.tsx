@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { SlidersHorizontal } from 'lucide-react';
 import CardProduto from './CardProduto';
 import BuscarProdutos from './BuscarProdutos';
+import FiltroPanel from './FiltroPanel';
 import { Produto } from '@/services/interfaces/interfaces';
 
 // Dados fictícios (Deverá ser substituído por chamadas de API depois).
@@ -157,10 +159,24 @@ const searchProducts = (produtos: Produto[], termo: string): Produto[] => {
   );
 };
 
+// Adicionar filtro de preço
+const filterByPrice = (produtos: Produto[], min: number | null, max: number | null): Produto[] => {
+  let result = produtos;
+  if (min !== null) {
+    result = result.filter(p => p.price >= min);
+  }
+  if (max !== null) {
+    result = result.filter(p => p.price <= max);
+  }
+  return result;
+};
+
 const getFilteredProducts = (
   produtos: Produto[], 
   termo: string | null, 
-  categoryName: string | null
+  categoryName: string | null,
+  minPrice: number | null, // Novo parâmetro
+  maxPrice: number | null  // Novo parâmetro
 ): Produto[] => {
   let result = [...produtos];
   
@@ -171,9 +187,18 @@ const getFilteredProducts = (
   if (termo && termo.trim()) {
     result = searchProducts(result, termo);
   }
+
+  // Aplicar filtro de preço
+  result = filterByPrice(result, minPrice, maxPrice);
   
+  // Lógica de ordenação virá aqui
+
   return result;
 };
+
+// Definir limites de preço baseado nos mocks (ou API no futuro)
+const MIN_PRICE_LIMIT = 0;
+const MAX_PRICE_LIMIT = 100; // Ajustar se necessário baseado nos dados
 
 const ListarProdutos = () => {
   const router = useRouter();
@@ -183,11 +208,34 @@ const ListarProdutos = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+
   // Obter parâmetros da URL
   const filterCategory = searchParams.get('category');
   const termoBusca = searchParams.get('q') || '';
-  
+  // Obter e validar parâmetros de preço
+  const urlMinPrice = searchParams.get('minPrice');
+  const urlMaxPrice = searchParams.get('maxPrice');
+
+  // Estados para preço, inicializados com valores da URL ou padrão
+  const [minPrice, setMinPrice] = useState<number>(urlMinPrice ? parseInt(urlMinPrice, 10) : MIN_PRICE_LIMIT);
+  const [maxPrice, setMaxPrice] = useState<number>(urlMaxPrice ? parseInt(urlMaxPrice, 10) : MAX_PRICE_LIMIT);
+
+  // Função para atualizar os parâmetros de preço na URL
+  const updatePriceParams = (newMin: number, newMax: number) => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.set('minPrice', newMin.toString());
+    newParams.set('maxPrice', newMax.toString());
+
+    // Atualiza os estados locais imediatamente para o slider refletir
+    setMinPrice(newMin);
+    setMaxPrice(newMax);
+
+    // Navega para a nova URL (debounce pode ser útil aqui no futuro)
+    const newUrl = `${pathname}?${newParams.toString()}`;
+    router.push(newUrl, { scroll: false });
+  };
+
   // Função para atualizar apenas o parâmetro de categoria na URL
   const updateCategoryParam = (category: string | null) => {
     const newParams = new URLSearchParams(searchParams.toString());
@@ -200,25 +248,29 @@ const ListarProdutos = () => {
     
     // Construir a nova URL
     const newUrl = newParams.toString() ? `${pathname}?${newParams.toString()}` : pathname;
-    router.push(newUrl);
+    router.push(newUrl, { scroll: false });
   };
 
   useEffect(() => {
+    // Atualiza estados locais se URL mudar externamente
+    setMinPrice(urlMinPrice ? parseInt(urlMinPrice, 10) : MIN_PRICE_LIMIT);
+    setMaxPrice(urlMaxPrice ? parseInt(urlMaxPrice, 10) : MAX_PRICE_LIMIT);
+
     const fetchProdutos = () => {
       try {
         setIsLoading(true);
-        // Simula API delay
         setTimeout(() => {
-          // Usar o serviço de busca para obter produtos filtrados
           const produtosFiltrados = getFilteredProducts(
             produtosMock,
             termoBusca,
-            filterCategory
+            filterCategory,
+            urlMinPrice ? parseInt(urlMinPrice, 10) : null, // Passa null se não estiver na URL
+            urlMaxPrice ? parseInt(urlMaxPrice, 10) : null  // Passa null se não estiver na URL
           );
           
           setProdutos(produtosFiltrados);
           setIsLoading(false);
-        }, 500); // Delay simulado
+        }, 300);
       } catch (err) {
         setIsLoading(false);
         setError('Erro ao carregar produtos');
@@ -227,7 +279,7 @@ const ListarProdutos = () => {
     };
 
     fetchProdutos();
-  }, [termoBusca, filterCategory]);
+  }, [termoBusca, filterCategory, urlMinPrice, urlMaxPrice]);
 
   // Categorias únicas para o filtro
   const categories = Array.from(new Set(produtosMock.map(p => p.category?.name))).filter(Boolean) as string[];
@@ -237,68 +289,104 @@ const ListarProdutos = () => {
     updateCategoryParam(category);
   };
 
+  // Handler para mudança de preço vindo do slider
+  const handlePriceChange = (value: number | number[]) => {
+    if (Array.isArray(value)) {
+      const [newMin, newMax] = value;
+      // Atualiza a URL (e os estados locais dentro de updatePriceParams)
+      updatePriceParams(newMin, newMax);
+    }
+  };
+
+  // Função para alternar a visibilidade do painel
+  const toggleFilterPanel = () => {
+    setIsFilterPanelOpen(prev => !prev);
+  };
+
+  // Handler para o botão "Aplicar Filtros" / Fechar
+  const handleApplyFilters = () => {
+    setIsFilterPanelOpen(false);
+  };
+
+  // Handler para limpar os filtros
+  const handleClearFilters = () => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    // Remove os parâmetros de filtro
+    newParams.delete('category');
+    newParams.delete('minPrice');
+    newParams.delete('maxPrice');
+    
+    // Constrói a nova URL (mantendo outros parâmetros como 'q' se existirem)
+    const newUrl = newParams.toString() ? `${pathname}?${newParams.toString()}` : pathname;
+    
+    // Navega e fecha o painel
+    router.push(newUrl, { scroll: false });
+    setIsFilterPanelOpen(false); 
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Barra de busca */}
-      <div className="mb-8">
-        <BuscarProdutos className="max-w-3xl mx-auto" />
-      </div>
-      
-      {/* Filtros */}
-      <div className="mb-8 flex flex-wrap gap-2">
-        <button
-          onClick={() => handleCategoryChange(null)}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-            !filterCategory ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-          }`}
-        >
-          Todos
-        </button>
-        
-        {categories.map((category) => (
+      {/* Barra de busca e botão de filtro */}
+      <div className="mb-8 flex justify-center items-center gap-4">
+        <div className="relative">
           <button
-            key={category}
-            onClick={() => handleCategoryChange(category)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              filterCategory === category ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-            }`}
+            onClick={toggleFilterPanel}
+            className="p-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+            aria-label="Abrir filtros"
           >
-            {category}
+            <SlidersHorizontal className="h-5 w-5" />
           </button>
-        ))}
+          {/* Passando onClearFilters para FiltroPanel */}
+          <FiltroPanel 
+            isOpen={isFilterPanelOpen} 
+            onClose={handleApplyFilters}
+            categories={categories}
+            selectedCategory={filterCategory}
+            onCategoryChange={handleCategoryChange}
+            minPrice={minPrice} 
+            maxPrice={maxPrice}
+            minPriceLimit={MIN_PRICE_LIMIT}
+            maxPriceLimit={MAX_PRICE_LIMIT}
+            onPriceChange={handlePriceChange}
+            onClearFilters={handleClearFilters}
+          />
+        </div>
+        <BuscarProdutos className="flex-grow max-w-xl" />
       </div>
       
-      {/* Listagem de produtos */}
-      <div>
-        {isLoading ? (
-          <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
-          </div>
-        ) : error ? (
-          <div className="text-center py-20">
-            <p className="text-red-500 text-xl">{error}</p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="mt-4 bg-green-500 text-white px-4 py-2 rounded-lg"
+      {/* Exibição dos Produtos */}
+      {isLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+        </div>
+      ) : error ? (
+        <div className="text-center py-20">
+          <p className="text-red-600 text-xl">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      ) : produtos.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {produtos.map((produto, index) => (
+            <div 
+              key={produto.id} 
+              className={`animate-fade-in-up opacity-0 delay-${Math.min(index, 15)}`} 
+              style={{ animationFillMode: 'forwards' }}
             >
-              Tentar novamente
-            </button>
-          </div>
-        ) : produtos.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-xl text-gray-600">Nenhum produto encontrado</p>
-            <p className="text-gray-500 mt-2">Tente usar outros termos de busca ou filtros.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {produtos.map((produto, index) => (
-              <div key={produto.id} className={`animate-fade-in-up delay-${Math.min(index, 15)} opacity-0`} style={{ animationFillMode: 'forwards' }}>
-                <CardProduto produto={produto} />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <CardProduto produto={produto} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-20">
+          <p className="text-xl text-gray-600">Nenhum produto encontrado</p>
+          <p className="text-gray-500 mt-2">Tente usar outros termos de busca ou filtros.</p>
+        </div>
+      )}
     </div>
   );
 };
