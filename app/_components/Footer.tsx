@@ -82,7 +82,7 @@ export default function Footer() {
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <FaMapMarkerAlt className="text-green-300" />
-                <span className="text-gray-200">Av. Agrodel, 1000 - São Paulo, SP</span>
+                <span className="text-gray-200">Av. Agrodel, 1000 - Solânea, PB</span>
               </div>
               <div className="flex items-center gap-3">
                 <FaPhone className="text-green-300" />
