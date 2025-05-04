@@ -75,14 +75,6 @@ function Header() {
         <h1 className="text-lg font-semibold text-gray-900">Visão Geral</h1>
       </div>
       <div className="flex items-center space-x-5">
-        <div className="relative">
-          <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="search"
-            placeholder="Buscar..."
-            className="pl-10 pr-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm w-64"
-          />
-        </div>
         <button className="text-gray-500 hover:text-gray-700 relative">
           <Bell size={22} />
           {/* Badge de notificação (opcional) */}
