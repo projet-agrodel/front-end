@@ -3,11 +3,10 @@
 import React from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  LineChart, Line // Importar LineChart e Line
+  LineChart, Line
 } from 'recharts';
-
-// Ícones placeholder (substitua por ícones reais)
-const IconPlaceholder = ({ className }: { className?: string }) => <span className={`inline-block w-6 h-6 ${className}`}>●</span>;
+// Importar ícones reais
+import { DollarSign, ShoppingBag, Users, Archive } from 'lucide-react';
 
 // --- Simulação de busca de dados ---
 // Substitua esta função pela sua lógica real de busca de dados (API, banco de dados, etc.)
@@ -56,6 +55,7 @@ function MetricCard({ title, value, icon, change, changeType }: MetricCardProps)
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex items-start space-x-4">
       <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+        {/* O ícone real será passado como prop aqui */}
         {icon}
       </div>
       <div>
@@ -166,33 +166,37 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-        {/* Cards de Métricas */}
+        {/* Cards de Métricas com ícones reais */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
                 title="Receita Total"
                 value={formatCurrency(data.totalRevenue)}
-                icon={<IconPlaceholder className="text-green-600" />}
-                change="+12% vs mês passado" // Exemplo
+                // Substituído IconPlaceholder por DollarSign
+                icon={<DollarSign size={24} className="text-green-600" />}
+                change="+12% vs mês passado" 
                 changeType='positive'
             />
             <MetricCard
                 title="Total de Vendas"
                 value={data.totalSalesCount.toLocaleString('pt-BR')}
-                icon={<IconPlaceholder className="text-blue-600" />}
-                change="+80 pedidos" // Exemplo
+                 // Substituído IconPlaceholder por ShoppingBag
+                icon={<ShoppingBag size={24} className="text-blue-600" />}
+                change="+80 pedidos"
                 changeType='positive'
             />
             <MetricCard
                 title="Usuários Ativos"
                 value={data.activeUsers.toLocaleString('pt-BR')}
-                icon={<IconPlaceholder className="text-purple-600" />}
-                change="-5% vs mês passado" // Exemplo
+                 // Substituído IconPlaceholder por Users
+                icon={<Users size={24} className="text-purple-600" />}
+                change="-5% vs mês passado"
                 changeType='negative'
             />
              <MetricCard
                 title="Produtos Cadastrados"
                 value={data.productCount.toLocaleString('pt-BR')}
-                icon={<IconPlaceholder className="text-orange-500" />}
+                 // Substituído IconPlaceholder por Archive
+                icon={<Archive size={24} className="text-orange-500" />}
             />
         </div>
 

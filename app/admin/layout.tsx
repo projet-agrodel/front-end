@@ -1,6 +1,6 @@
 'use client'; // Diretiva movida para o topo do arquivo
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Tag, Settings, LogOut, Search, Bell, UserCircle
@@ -9,9 +9,10 @@ import {
 // Hook para obter o pathname (necessário para link ativo)
 import { usePathname } from 'next/navigation';
 
-// Componente Sidebar Minimalista
+// Componente Sidebar Expansível
 function Sidebar() {
-  const pathname = usePathname(); // Obter o path atual
+  const pathname = usePathname();
+  const [isExpanded, setIsExpanded] = useState(false); // Estado para controlar expansão
 
   const navItems = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -23,17 +24,21 @@ function Sidebar() {
   ];
 
   return (
-    <aside className="w-20 bg-white border-r border-gray-200 flex flex-col items-center py-4">
-      {/* Logo ou Ícone Principal */}
-      <div className="h-12 flex items-center justify-center mb-6">
-        {/* Substitua pelo seu logo/ícone real */}
-        <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center text-white font-bold">
+    <aside 
+        className={`bg-white border-r border-gray-200 flex flex-col items-center py-4 transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'w-64 items-start' : 'w-20 items-center'}`}
+        onMouseEnter={() => setIsExpanded(true)}
+        onMouseLeave={() => setIsExpanded(false)}
+    >
+      {/* Logo ou Ícone Principal (ajustar padding se expandido) */}
+      <div className={`h-12 flex items-center mb-6 ${isExpanded ? 'pl-6' : 'justify-center w-full'}`}>
+        <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
           A
         </div>
+        {isExpanded && <span className="ml-3 font-semibold text-lg text-gray-800">Agrodel</span>}
       </div>
 
       {/* Navegação Principal */}
-      <nav className="flex-grow flex flex-col items-center space-y-3">
+      <nav className="flex-grow flex flex-col space-y-2 w-full px-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(item.href));
           const Icon = item.icon;
@@ -41,25 +46,27 @@ function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              title={item.name} // Tooltip com o nome
-              className={`p-3 rounded-lg transition-colors duration-200 ${isActive
+              title={isExpanded ? '' : item.name} // Mostrar tooltip apenas quando colapsado
+              className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-150 ease-in-out ${isActive
                   ? 'bg-green-100 text-green-700'
-                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
-                }`}
+                  : 'text-gray-500 hover:bg-gray-200 hover:text-gray-800'
+                } ${!isExpanded ? 'justify-center' : ''}`}
             >
-              <Icon size={24} />
+              <Icon size={24} className="flex-shrink-0" />
+              {isExpanded && <span className="ml-4 text-sm font-medium whitespace-nowrap">{item.name}</span>}
             </Link>
           );
         })}
       </nav>
 
-      {/* Ícone de Sair na Base */}
-      <div className="mt-auto">
+      {/* Ícone/Botão de Sair na Base */}
+      <div className="mt-auto w-full px-2 pb-2">
         <button
           title="Sair"
-          className="p-3 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors duration-200"
+          className={`flex items-center px-4 py-3 rounded-lg text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors duration-150 ease-in-out w-full ${!isExpanded ? 'justify-center' : ''}`}
         >
-          <LogOut size={24} />
+          <LogOut size={24} className="flex-shrink-0" />
+          {isExpanded && <span className="ml-4 text-sm font-medium whitespace-nowrap">Sair</span>}
         </button>
       </div>
     </aside>
@@ -97,7 +104,7 @@ export default function AdminLayout({
    // 'use client' foi movido para o topo do arquivo
 
   return (
-    <div className="flex bg-gray-100">
+    <div className="flex bg-gray-100 min-h-full">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Header />
