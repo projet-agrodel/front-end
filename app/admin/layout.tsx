@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  LayoutDashboard, ShoppingCart, Package, Users, Tag, Settings, LogOut, Search, Bell, UserCircle
+  LayoutDashboard, ShoppingCart, Package, Users, Tag, Settings, LogOut, Bell, UserCircle
 } from 'lucide-react'; // Importar ícones reais
 
 // Hook para obter o pathname (necessário para link ativo)
@@ -50,7 +50,7 @@ function Sidebar() {
               className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-150 ease-in-out ${isActive
                   ? 'bg-green-100 text-green-700'
                   : 'text-gray-500 hover:bg-gray-200 hover:text-gray-800'
-                } ${!isExpanded ? 'justify-center' : ''}`}
+                }`}
             >
               <Icon size={24} className="flex-shrink-0" />
               {isExpanded && <span className="ml-4 text-sm font-medium whitespace-nowrap">{item.name}</span>}

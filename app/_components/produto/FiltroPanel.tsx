@@ -5,13 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, ArrowDownUp, ArrowUpNarrowWide, ArrowDownWideNarrow } from 'lucide-react';
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
+import { Categoria } from '@/services/interfaces/interfaces';
 
 interface FiltroPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  categories: string[];
-  selectedCategory: string | null;
-  onCategoryChange: (category: string | null) => void;
+  categories: Categoria[];
+  selectedCategoryId: number | null;
+  onCategoryChange: (categoryId: number | null) => void;
   minPrice: number;
   maxPrice: number;
   minPriceLimit: number;
@@ -32,8 +33,8 @@ const FiltroPanel: React.FC<FiltroPanelProps> = ({
   isOpen, 
   onClose, 
   categories, 
-  selectedCategory, 
-  onCategoryChange, 
+  selectedCategoryId,
+  onCategoryChange,
   minPrice,
   maxPrice,
   minPriceLimit,
@@ -73,17 +74,17 @@ const FiltroPanel: React.FC<FiltroPanelProps> = ({
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => onCategoryChange(null)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${!selectedCategory ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selectedCategoryId === null ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                   >
                     Todas
                   </button>
                   {categories.map(cat => (
                     <button
-                      key={cat}
-                      onClick={() => onCategoryChange(cat)}
-                      className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selectedCategory === cat ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                      key={cat.id}
+                      onClick={() => onCategoryChange(cat.id)}
+                      className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selectedCategoryId === cat.id ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                     >
-                      {cat}
+                      {cat.name}
                     </button>
                   ))}
                 </div>
