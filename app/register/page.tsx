@@ -7,6 +7,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import PasswordCriteriaPopup from '../_components/register/PasswordCriteriaPopup';
 import { User, Mail, Lock, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 
+// Adicione a URL base da sua API
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 const RegisterPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -42,11 +45,12 @@ const RegisterPage = () => {
     setPassword(e.target.value);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-
+    
+    // Manter validações existentes
     if (!allCriteriaMet) {
         setError('A senha não atende a todos os critérios.');
         return;
@@ -61,25 +65,48 @@ const RegisterPage = () => {
         setError('Nome e email são obrigatórios.');
         return;
     }
-    
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-        const existingUser = JSON.parse(storedUser);
-        if (existingUser.email === email) {
-            setError('Este email já está registrado. Tente fazer login.');
-            return;
+
+    // Construir o corpo da requisição
+    const userData = { name, email, password, type: 'client' }; // Adicionando type default
+
+    try {
+      const response = await fetch(`${API_URL}/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Se a resposta não for OK, trata como erro
+        throw new Error(data.message || 'Falha no registro.');
+      }
+
+      // Sucesso
+      console.log('Registration successful:', data);
+      setSuccess('Registro realizado com sucesso! Redirecionando para login...');
+
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+
+    } catch (err) {
+      // Captura erros da API ou de rede
+      console.error('Registration error:', err);
+      let errorMessage = 'Ocorreu um erro durante o registro.';
+      if (err instanceof Error) {
+        // Verificar se é o erro de email duplicado
+        if (err.message.includes('UNIQUE constraint failed') || err.message.includes('already exists')) { // Adapte se a msg do backend for diferente
+          errorMessage = 'Este email já está cadastrado. Tente fazer login.';
+        } else {
+          errorMessage = err.message;
         }
+      }
+      setError(errorMessage);
     }
-
-    const newUser = { name, email, password };
-    localStorage.setItem('user', JSON.stringify(newUser));
-
-    console.log('Registration successful for:', email);
-    setSuccess('Registro realizado com sucesso! Redirecionando para login...');
-
-    setTimeout(() => {
-      router.push('/login');
-    }, 2000);
   };
 
   const toggleShowPassword = () => {

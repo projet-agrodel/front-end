@@ -3,8 +3,11 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff, User, Lock, Mail } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+// Adiciona a URL base da API (se ainda não importada ou definida globalmente)
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -13,27 +16,44 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Modificar handleSubmit para chamar a API de login
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    const storedUser = localStorage.getItem('user');
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, { // Assumindo endpoint /auth/login
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (!storedUser) {
-      setError('Nenhum usuário registrado. Por favor, registre-se primeiro.');
-      return;
-    }
+      const data = await response.json();
 
-    const user = JSON.parse(storedUser);
+      if (!response.ok) {
+        throw new Error(data.message || 'Email ou senha inválidos.');
+      }
 
-    if (user.email === email && user.password === password) {
-      console.log('Login successful for:', email);
-      sessionStorage.setItem('isLoggedIn', 'true');
-      sessionStorage.setItem('userName', user.name);
+      // Sucesso - Armazenar token e informações do usuário
+      // O backend deve retornar um token JWT (ex: data.access_token)
+      if (data.access_token) {
+        console.log('Login successful for:', email);
+        localStorage.setItem('token', data.access_token); // Armazena o token JWT
+        // Opcional: Armazenar outras informações do usuário se retornadas pela API
+        // localStorage.setItem('userName', data.user.name);
+        
+        // Redirecionar para a página principal ou dashboard
+        router.push('/');
+      } else {
+        setError('Token de acesso não recebido.');
+      }
 
-      router.push('/');
-    } else {
-      setError('Email ou senha inválidos.');
+    } catch (err) {
+      console.error('Login error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro durante o login.';
+      setError(errorMessage);
     }
   };
 
