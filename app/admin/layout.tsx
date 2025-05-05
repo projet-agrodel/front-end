@@ -8,6 +8,7 @@ import {
 
 // Hook para obter o pathname (necessário para link ativo)
 import { usePathname } from 'next/navigation';
+import { div } from 'framer-motion/client';
 
 // Componente Sidebar Expansível
 function Sidebar() {
@@ -24,52 +25,54 @@ function Sidebar() {
   ];
 
   return (
-    <aside 
-        className={`bg-white border-r border-gray-200 flex flex-col items-center py-4 transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'w-64 items-start' : 'w-20 items-center'}`}
-        onMouseEnter={() => setIsExpanded(true)}
-        onMouseLeave={() => setIsExpanded(false)}
-    >
-      {/* Logo ou Ícone Principal (ajustar padding se expandido) */}
-      <div className={`h-12 flex items-center mb-6 ${isExpanded ? 'pl-6' : 'justify-center w-full'}`}>
-        <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
-          A
-        </div>
-        {isExpanded && <span className="ml-3 font-semibold text-lg text-gray-800">Agrodel</span>}
-      </div>
-
-      {/* Navegação Principal */}
-      <nav className="flex-grow flex flex-col space-y-2 w-full px-2">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(item.href));
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              title={isExpanded ? '' : item.name} // Mostrar tooltip apenas quando colapsado
-              className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-150 ease-in-out ${isActive
-                  ? 'bg-green-100 text-green-700'
-                  : 'text-gray-500 hover:bg-gray-200 hover:text-gray-800'
-                }`}
-            >
-              <Icon size={24} className="flex-shrink-0" />
-              {isExpanded && <span className="ml-4 text-sm font-medium whitespace-nowrap">{item.name}</span>}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Ícone/Botão de Sair na Base */}
-      <div className="mt-auto w-full px-2 pb-2">
-        <button
-          title="Sair"
-          className={`flex items-center px-4 py-3 rounded-lg text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors duration-150 ease-in-out w-full ${!isExpanded ? 'justify-center' : ''}`}
+      <div className="flex h-full w-20">
+        <aside 
+          className={`z-50 fixed min-h-110 h-full bg-white border-r border-gray-200 flex flex-col items-center py-4 transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'w-64 items-start' : 'w-20 items-center'}`}
+          onMouseEnter={() => setIsExpanded(true)}
+          onMouseLeave={() => setIsExpanded(false)}
         >
-          <LogOut size={24} className="flex-shrink-0" />
-          {isExpanded && <span className="ml-4 text-sm font-medium whitespace-nowrap">Sair</span>}
-        </button>
-      </div>
-    </aside>
+        {/* Logo ou Ícone Principal (ajustar padding se expandido) */}
+        <div className={`h-12 px-4 flex items-center mb-6 ${isExpanded ? '' : 'w-full'}`}>
+          <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
+            A
+          </div>
+          {isExpanded && <span className="ml-3 font-semibold text-lg text-gray-800">Agrodel</span>}
+        </div>
+
+        {/* Navegação Principal */}
+        <nav className="flex-grow flex flex-col space-y-2 w-full px-2">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(item.href));
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                title={isExpanded ? '' : item.name} // Mostrar tooltip apenas quando colapsado
+                className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-150 ease-in-out ${isActive
+                    ? 'bg-green-100 text-green-700'
+                    : 'text-gray-500 hover:bg-gray-200 hover:text-gray-800'
+                  }`}
+              >
+                <Icon size={24} className="flex-shrink-0" />
+                {isExpanded && <span className="ml-4 text-sm font-medium whitespace-nowrap">{item.name}</span>}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Ícone/Botão de Sair na Base */}
+        <div className="mt-auto w-full px-2 pb-2">
+          <button
+            title="Sair"
+            className={`flex items-center px-4 py-3 rounded-lg text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors duration-150 ease-in-out w-full`}
+          >
+            <LogOut size={24} className="flex-shrink-0" />
+            {isExpanded && <span className="ml-4 text-sm font-medium whitespace-nowrap">Sair</span>}
+          </button>
+        </div>
+      </aside>
+    </div>
   );
 }
 
