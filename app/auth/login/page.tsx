@@ -39,6 +39,11 @@ const LoginPage = () => {
       if (data.access_token) {
         console.log('Login successful for:', email);
         localStorage.setItem('token', data.access_token);
+        if (data.user && data.user.name) {
+          localStorage.setItem('userName', data.user.name);
+        } else {
+          localStorage.removeItem('userName');
+        }
         router.push('/');
       } else {
         setError('Token de acesso não recebido.');

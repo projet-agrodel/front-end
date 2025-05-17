@@ -8,45 +8,85 @@ import { PersonalInfo } from '../_components/profile/tabs/PersonalInfo';
 import { Cards } from '../_components/profile/tabs/Cards';
 import { Comments } from '../_components/profile/tabs/Comments';
 import { ChangePasswordTab } from '../_components/profile/tabs/ChangePasswordTab';
+import { useRouter } from 'next/navigation';
 
-const fetchUserData = async (): Promise<User> => {
-  return {
-    id: 1,
-    name: 'Maria Silva',
-    email: 'maria.silva@exemplo.com',
-    phone: '(11) 98765-4321',
-    type: 'client',
-    avatar: 'https://w7.pngwing.com/pngs/223/244/png-transparent-computer-icons-avatar-user-profile-avatar-heroes-rectangle-black.png',
-    cards: [
-      { id: 1, number: '**** **** **** 1234', expiry: '12/25' },
-      { id: 2, number: '**** **** **** 5678', expiry: '09/24' }
-    ],
-    comments: [
-      { id: 1, productName: 'Smartphone XYZ', text: 'Produto excelente!', rating: 5, date: '2023-11-15' },
-      { id: 2, productName: 'Notebook ABC', text: 'Bom custo-benefício', rating: 4, date: '2023-10-22' }
-    ]
-  };
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+const fetchUserData = async (token: string | null): Promise<User | null> => {
+  if (!token) {
+    // Não há token, não precisa nem tentar buscar
+    return null;
+  }
+  try {
+    const response = await fetch(`${API_URL}/user/profile`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 401 || response.status === 404) { // Não autorizado ou não encontrado
+      localStorage.removeItem('token'); // Limpar token inválido
+      return null; // Indica que o usuário deve ser redirecionado
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Erro ao buscar dados do usuário.' }));
+      throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
+    }
+    
+    const userData = await response.json();
+    // Simular dados que podem não vir do backend ou precisam de tratamento
+    return {
+      ...userData,
+      avatar: userData.avatar || 'https://w7.pngwing.com/pngs/223/244/png-transparent-computer-icons-avatar-user-profile-avatar-heroes-rectangle-black.png', // Placeholder se não houver avatar
+      cards: userData.cards || [],
+      comments: userData.comments || [],
+    };
+
+  } catch (error) {
+    console.error('Falha ao buscar dados do usuário:', error);
+    localStorage.removeItem('token'); // Limpar token em caso de erro na requisição
+    return null; // Indica que o usuário deve ser redirecionado
+  }
 };
 
 const ProfilePage = () => {
   const [userData, setUserData] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('info');
+  const router = useRouter();
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      router.push('/auth/login');
+      return;
+    }
+
     const getUserData = async () => {
+      setIsLoading(true);
       try {
-        const data = await fetchUserData();
-        setUserData(data);
+        const data = await fetchUserData(token);
+        if (data) {
+          setUserData(data);
+        } else {
+          localStorage.removeItem('token');
+          router.push('/auth/login');
+        }
       } catch (error) {
-        console.error('Erro ao buscar dados do usuário:', error);
+        console.error('Erro ao buscar dados do usuário na página:', error);
+        localStorage.removeItem('token');
+        router.push('/auth/login');
       } finally {
         setIsLoading(false);
       }
     };
     
     getUserData();
-  }, []);
+  }, [router]);
 
   const handleUpdateUser = (updatedUser: User) => {
     setUserData(updatedUser);

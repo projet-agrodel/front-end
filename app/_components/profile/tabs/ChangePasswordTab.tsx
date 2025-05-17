@@ -52,9 +52,9 @@ export const ChangePasswordTab: React.FC = () => {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          current_password: currentPassword,
-          new_password: newPassword,
-          confirm_password: confirmNewPassword, // O backend também pode validar isso
+          currentPassword: currentPassword,
+          newPassword: newPassword,
+          confirmPassword: confirmNewPassword,
         }),
       });
 
