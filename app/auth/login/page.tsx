@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
-import ForgotPasswordPopup from '../../_components/Auth/ForgotPasswordPopup';
+import ForgotPasswordPopup from '../_components/ForgotPasswordPopup';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
