@@ -109,7 +109,7 @@ export const ChangePasswordTab: React.FC = () => {
           <button 
             type="button"
             onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-            className="absolute top-8 right-0 pr-3 flex items-center h-full"
+            className="absolute top-9 right-0 pr-3 flex items-center"
             aria-label={showCurrentPassword ? "Esconder senha" : "Mostrar senha"}
           >
             {showCurrentPassword ? <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" /> : <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />}
@@ -136,7 +136,7 @@ export const ChangePasswordTab: React.FC = () => {
           <button 
             type="button"
             onClick={() => setShowNewPassword(!showNewPassword)}
-            className="absolute top-8 right-0 pr-3 flex items-center h-full"
+            className="absolute top-9 right-0 pr-3 flex items-center"
             aria-label={showNewPassword ? "Esconder senha" : "Mostrar senha"}
           >
             {showNewPassword ? <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" /> : <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />}
@@ -163,7 +163,7 @@ export const ChangePasswordTab: React.FC = () => {
           <button 
             type="button"
             onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
-            className="absolute top-8 right-0 pr-3 flex items-center h-full"
+            className="absolute top-9 right-0 pr-3 flex items-center"
             aria-label={showConfirmNewPassword ? "Esconder senha" : "Mostrar senha"}
           >
             {showConfirmNewPassword ? <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" /> : <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />}

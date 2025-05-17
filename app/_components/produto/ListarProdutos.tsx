@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { SlidersHorizontal } from 'lucide-react';
 import CardProduto from './CardProduto';
@@ -95,8 +95,8 @@ const ListarProdutos = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
-  // Adicionar estado para forçar reanimação
   const [animationTrigger, setAnimationTrigger] = useState(0);
+  const prevFilterStateRef = useRef<string | null>(null); // Para rastrear o estado anterior dos filtros
 
   // Obter parâmetros da URL
   const urlCategoryId = searchParams.get('category');
@@ -191,8 +191,20 @@ const ListarProdutos = () => {
     fetchData();
   }, []);
 
-  // useEffect para aplicar filtros/ordenação
   useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    const currentFilterState = JSON.stringify({
+      termoBusca,
+      urlCategoryId,
+      urlMinPrice,
+      urlMaxPrice,
+      urlSortOrder,
+      todosOsProdutosCount: todosOsProdutos.length
+    });
+
     if (todosOsProdutos.length > 0) {
       const categoryIdFromUrl = urlCategoryId ? parseInt(urlCategoryId, 10) : null;
       const minPriceFromUrl = urlMinPrice ? parseInt(urlMinPrice, 10) : null;
@@ -201,20 +213,27 @@ const ListarProdutos = () => {
       const produtosFiltrados = getFilteredProducts(
         todosOsProdutos,
         termoBusca,
-        categoryIdFromUrl, // Passar ID da categoria
+        categoryIdFromUrl, 
         minPriceFromUrl,
         maxPriceFromUrl,
         urlSortOrder
       );
       setProdutosExibidos(produtosFiltrados);
-      // Incrementar o trigger para forçar reanimação na próxima renderização
-      setAnimationTrigger(prev => prev + 1); 
-    }
-     // Atualizar dependências
-  }, [todosOsProdutos, termoBusca, urlCategoryId, urlMinPrice, urlMaxPrice, urlSortOrder]);
 
-  // Remover extração de categorias do mock
-  // const categories: string[] = [];
+      if (prevFilterStateRef.current !== currentFilterState) {
+        setAnimationTrigger(prev => prev + 1); 
+      }
+    } else if (todosOsProdutos.length === 0 && !isLoading) { 
+      setProdutosExibidos([]);
+      if (prevFilterStateRef.current !== currentFilterState) {
+        //setAnimationTrigger(prev => prev + 1); // Descomente se quiser "animar" a entrada do estado "Nenhum produto"
+      }
+    }
+
+    prevFilterStateRef.current = currentFilterState;
+
+  }, [todosOsProdutos, termoBusca, urlCategoryId, urlMinPrice, urlMaxPrice, urlSortOrder, isLoading]);
+
 
   // Handlers (mantidos como estavam, pois atualizam a URL que dispara o useEffect de filtragem)
   const handleCategoryChange = (categoryId: number | null) => {
@@ -299,11 +318,9 @@ const ListarProdutos = () => {
       ) : produtosExibidos.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {produtosExibidos.map((produto, index) => {
-            // Remover cálculo de cor aqui
-            // const bgColor = produto.category ? categoryColors[produto.category.name] || categoryColors.default : categoryColors.default;
             return (
               <div 
-                key={`${animationTrigger}-${produto.id}`} 
+                key={`${animationTrigger}-${produto.id}`} // Usar animationTrigger e produto.id na key
                 className={`animate-fade-in-up opacity-0 delay-${Math.min(index, 15)}`} 
                 style={{ animationFillMode: 'forwards' }}
               >
