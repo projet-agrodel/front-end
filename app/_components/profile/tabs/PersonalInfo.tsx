@@ -39,7 +39,7 @@ export const PersonalInfo = ({ user, onUpdate }: PersonalInfoProps) => {
       <div className="mt-6 flex justify-end">
         <button 
           onClick={() => setIsEditModalOpen(true)}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
+          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors"
         >
           Editar Informações
         </button>
