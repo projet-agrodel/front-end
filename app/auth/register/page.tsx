@@ -1,87 +1,84 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import PasswordCriteriaPopup from '../../_components/register/PasswordCriteriaPopup';
 import { User, Mail, Lock, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
+// Schema de validação com Zod
+const registerSchema = z.object({
+  name: z.string()
+    .min(3, 'O nome deve ter pelo menos 3 caracteres')
+    .max(100, 'O nome deve ter no máximo 100 caracteres'),
+  email: z.string()
+    .email('Email inválido')
+    .min(1, 'Email é obrigatório'),
+  password: z.string()
+    .min(8, 'A senha deve ter pelo menos 8 caracteres')
+    .regex(/[A-Z]/, 'A senha deve conter pelo menos uma letra maiúscula')
+    .regex(/[0-9]/, 'A senha deve conter pelo menos um número'),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "As senhas não coincidem",
+  path: ["confirmPassword"],
+});
+
+type RegisterFormData = z.infer<typeof registerSchema>;
+
 const RegisterPage = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const [success, setSuccess] = useState('');
   const router = useRouter();
 
-  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
-  const [passwordCriteria, setPasswordCriteria] = useState({
-    minLength: false,
-    uppercase: false,
-    number: false,
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    watch,
+    setError,
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
   });
-  const [allCriteriaMet, setAllCriteriaMet] = useState(false);
 
-  const validatePassword = (pass: string) => {
-    const minLength = pass.length >= 8;
-    const uppercase = /[A-Z]/.test(pass);
-    const number = /[0-9]/.test(pass);
-    setPasswordCriteria({ minLength, uppercase, number });
-    return minLength && uppercase && number;
+  const password = watch('password');
+
+  const passwordCriteria = {
+    minLength: password?.length >= 8,
+    uppercase: /[A-Z]/.test(password || ''),
+    number: /[0-9]/.test(password || ''),
   };
 
-  useEffect(() => {
-    setAllCriteriaMet(validatePassword(password));
-  }, [password]);
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPassword(e.target.value);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    
-    if (!allCriteriaMet) {
-        setError('A senha não atende a todos os critérios.');
-        return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('As senhas não coincidem.');
-      return;
-    }
-
-    if (!name || !email) {
-        setError('Nome e email são obrigatórios.');
-        return;
-    }
-
-    const userData = { name, email, password, type: 'client' };
-
+  const onSubmit = async (data: RegisterFormData) => {
     try {
       const response = await fetch(`${API_URL}/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          type: 'client'
+        }),
       });
 
-      const data = await response.json();
+      const responseData = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Falha no registro.');
+        throw new Error(responseData.message || 'Falha no registro.');
       }
 
-      console.log('Registration successful:', data);
+      console.log('Registration successful:', responseData);
       setSuccess('Registro realizado com sucesso! Redirecionando para login...');
 
       setTimeout(() => {
@@ -98,7 +95,9 @@ const RegisterPage = () => {
           errorMessage = err.message;
         }
       }
-      setError(errorMessage);
+      setError('root', {
+        message: errorMessage,
+      });
     }
   };
 
@@ -137,15 +136,15 @@ const RegisterPage = () => {
           </motion.p>
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          {errors.root && (
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="flex items-center gap-2 text-red-500 text-sm bg-red-50 p-3 rounded-md"
             >
               <AlertCircle className="h-5 w-5" />
-              <p>{error}</p>
+              <p>{errors.root.message}</p>
             </motion.div>
           )}
           
@@ -168,14 +167,16 @@ const RegisterPage = () => {
               <User className="absolute top-3 left-3 h-5 w-5 text-gray-400" />
               <input
                 id="name"
-                name="name"
                 type="text"
-                required
-                className="appearance-none relative block w-full pl-12 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                className={`appearance-none relative block w-full pl-12 pr-3 py-3 border ${
+                  errors.name ? 'border-red-500' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm`}
                 placeholder="Nome Completo"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                {...register('name')}
               />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-500">{errors.name.message}</p>
+              )}
             </div>
             
             <div className="relative">
@@ -185,15 +186,17 @@ const RegisterPage = () => {
               <Mail className="absolute top-3 left-3 h-5 w-5 text-gray-400" />
               <input
                 id="email-address"
-                name="email"
                 type="email"
                 autoComplete="email"
-                required
-                className="appearance-none relative block w-full pl-12 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                className={`appearance-none relative block w-full pl-12 pr-3 py-3 border ${
+                  errors.email ? 'border-red-500' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm`}
                 placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...register('email')}
               />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>
+              )}
             </div>
             
             <div className="relative">
@@ -203,14 +206,13 @@ const RegisterPage = () => {
               <Lock className="absolute top-3 left-3 h-5 w-5 text-gray-400" />
               <input
                 id="password"
-                name="password"
                 type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
-                required
-                className="appearance-none relative block w-full pl-12 pr-12 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                className={`appearance-none relative block w-full pl-12 pr-12 py-3 border ${
+                  errors.password ? 'border-red-500' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm`}
                 placeholder="Senha"
-                value={password}
-                onChange={handlePasswordChange}
+                {...register('password')}
                 onFocus={() => setIsPasswordFocused(true)}
                 onBlur={() => setIsPasswordFocused(false)}
               />
@@ -225,6 +227,9 @@ const RegisterPage = () => {
                   <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                 )}
               </button>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>
+              )}
               <AnimatePresence>
                 {isPasswordFocused && <PasswordCriteriaPopup criteria={passwordCriteria} />}
               </AnimatePresence>
@@ -237,14 +242,13 @@ const RegisterPage = () => {
               <Lock className="absolute top-3 left-3 h-5 w-5 text-gray-400" />
               <input
                 id="confirm-password"
-                name="confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
                 autoComplete="new-password"
-                required
-                className="appearance-none relative block w-full pl-12 pr-12 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                className={`appearance-none relative block w-full pl-12 pr-12 py-3 border ${
+                  errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm`}
                 placeholder="Confirmar Senha"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                {...register('confirmPassword')}
               />
               <button 
                 type="button"
@@ -257,6 +261,9 @@ const RegisterPage = () => {
                   <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                 )}
               </button>
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-500">{errors.confirmPassword.message}</p>
+              )}
             </div>
           </div>
 

@@ -5,54 +5,76 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import ForgotPasswordPopup from '../_components/ForgotPasswordPopup';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
+// Schema de validação com Zod
+const loginSchema = z.object({
+  email: z.string()
+    .email('Email inválido')
+    .min(1, 'Email é obrigatório'),
+  password: z.string()
+    .min(6, 'A senha deve ter pelo menos 6 caracteres')
+    .max(100, 'A senha deve ter no máximo 100 caracteres'),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPasswordPopup, setShowForgotPasswordPopup] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setError,
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
 
+  const onSubmit = async (data: LoginFormData) => {
     try {
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(data),
       });
 
-      const data = await response.json();
+      const responseData = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Email ou senha inválidos.');
+        throw new Error(responseData.message || 'Email ou senha inválidos.');
       }
 
-      if (data.access_token) {
-        console.log('Login successful for:', email);
-        localStorage.setItem('token', data.access_token);
-        if (data.user && data.user.name) {
-          localStorage.setItem('userName', data.user.name);
+      if (responseData.access_token) {
+        console.log('Login successful for:', data.email);
+        localStorage.setItem('token', responseData.access_token);
+        if (responseData.user && responseData.user.name) {
+          localStorage.setItem('userName', responseData.user.name);
         } else {
           localStorage.removeItem('userName');
         }
         router.push('/');
       } else {
-        setError('Token de acesso não recebido.');
+        setError('root', {
+          message: 'Token de acesso não recebido.',
+        });
       }
 
     } catch (err) {
       console.error('Login error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro durante o login.';
-      setError(errorMessage);
+      setError('root', {
+        message: errorMessage,
+      });
     }
   };
 
@@ -95,14 +117,14 @@ const LoginPage = () => {
           </motion.p>
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          {errors.root && (
             <motion.p 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-md"
             >
-              {error}
+              {errors.root.message}
             </motion.p>
           )}
           
@@ -114,15 +136,17 @@ const LoginPage = () => {
               <Mail className="absolute top-3 left-3 h-5 w-5 text-gray-400" />
               <input
                 id="email-address"
-                name="email"
                 type="email"
                 autoComplete="email"
-                required
-                className="appearance-none relative block w-full pl-12 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                className={`appearance-none relative block w-full pl-12 pr-3 py-3 border ${
+                  errors.email ? 'border-red-500' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm`}
                 placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...register('email')}
               />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>
+              )}
             </div>
             
             <div className="relative">
@@ -132,14 +156,13 @@ const LoginPage = () => {
               <Lock className="absolute top-3 left-3 h-5 w-5 text-gray-400" />
               <input
                 id="password"
-                name="password"
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
-                required
-                className="appearance-none relative block w-full pl-12 pr-12 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                className={`appearance-none relative block w-full pl-12 pr-12 py-3 border ${
+                  errors.password ? 'border-red-500' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm`}
                 placeholder="Senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                {...register('password')}
               />
               <button 
                 type="button"
@@ -152,6 +175,9 @@ const LoginPage = () => {
                   <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                 )}
               </button>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>
+              )}
             </div>
           </div>
 
