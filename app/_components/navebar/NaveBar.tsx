@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
-import { ShoppingCartIcon } from 'lucide-react';
+import { ShoppingCartIcon, UserCircle2 } from 'lucide-react';
 
 const Navbar = () => {
   const pathname = usePathname();
@@ -15,20 +15,38 @@ const Navbar = () => {
   const { totalItems } = useCart();
 
   useEffect(() => {
-    const loggedInStatus = sessionStorage.getItem('isLoggedIn');
-    const storedUserName = sessionStorage.getItem('userName');
-    setIsLoggedIn(loggedInStatus === 'true');
-    if (loggedInStatus === 'true' && storedUserName) {
+    const token = localStorage.getItem('token');
+    const storedUserName = localStorage.getItem('userName');
+    
+    setIsLoggedIn(!!token);
+    if (token && storedUserName) {
       setUserName(storedUserName);
+    } else if (token && !storedUserName) {
     }
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'token' || event.key === 'userName') {
+        const currentToken = localStorage.getItem('token');
+        const currentUserName = localStorage.getItem('userName');
+        setIsLoggedIn(!!currentToken);
+        setUserName(currentUserName || '');
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+
   }, [pathname]);
 
   const handleLogout = () => {
-    sessionStorage.removeItem('isLoggedIn');
-    sessionStorage.removeItem('userName');
+    localStorage.removeItem('token');
+    localStorage.removeItem('userName');
     setIsLoggedIn(false);
     setUserName('');
-    router.push('/'); 
+    router.push('/auth/login');
     router.refresh();
   };
 
@@ -80,7 +98,10 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             {isLoggedIn ? (
               <>
-                <span className="text-gray-700 text-sm">Olá, {userName}!</span>
+                <Link href="/profile" className="flex items-center text-gray-700 hover:text-green-600 transition-colors duration-200">
+                  <UserCircle2 className="h-6 w-6 mr-2" />
+                  <span className="text-sm font-medium">{userName || 'Meu Perfil'}</span>
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-red-100 hover:text-red-600"
@@ -91,9 +112,9 @@ const Navbar = () => {
             ) : (
               <>
                 <Link
-                  href="/login"
+                  href="/auth/login"
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
-                    pathname === '/login'
+                    pathname === '/auth/login'
                       ? 'bg-green-500 text-white'
                       : 'text-gray-700 hover:bg-green-100'
                   }`}
@@ -101,9 +122,9 @@ const Navbar = () => {
                   Login
                 </Link>
                 <Link
-                  href="/register"
+                  href="/auth/register"
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
-                    pathname === '/register'
+                    pathname === '/auth/register'
                       ? 'bg-green-500 text-white'
                       : 'text-gray-700 hover:bg-green-100'
                   }`}
@@ -137,15 +158,20 @@ const Navbar = () => {
 
             {/* Mobile Auth Links/Button */} 
              {isLoggedIn ? (
-               <button
+              <div className="flex items-center">
+                <Link href="/profile" className="p-2 text-gray-700 hover:text-green-600">
+                  <UserCircle2 className="h-6 w-6" />
+                </Link>
+                <button
                   onClick={handleLogout}
                   className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-red-100 hover:text-red-600"
                 >
                   Sair
                 </button>
+              </div>
              ) : (
                 <Link
-                  href="/login"
+                  href="/auth/login"
                   className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-green-100"
                 >
                   Login

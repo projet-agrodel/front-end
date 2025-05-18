@@ -47,13 +47,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="text-gray-200 hover:text-white hover:underline transition-colors">
+                <Link href="/auth/login" className="text-gray-200 hover:text-white hover:underline transition-colors">
                   Login
                 </Link>
               </li>
               <li>
-                <Link href="/register" className="text-gray-200 hover:text-white hover:underline transition-colors">
-                  Criar Conta
+                <Link href="/auth/register" className="text-gray-200 hover:text-white hover:underline transition-colors">
+                  Registrar
                 </Link>
               </li>
             </ul>

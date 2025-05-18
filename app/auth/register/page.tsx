@@ -4,10 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import PasswordCriteriaPopup from '../_components/register/PasswordCriteriaPopup';
+import PasswordCriteriaPopup from '../../_components/register/PasswordCriteriaPopup';
 import { User, Mail, Lock, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 
-// Adicione a URL base da sua API
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const RegisterPage = () => {
@@ -50,7 +49,6 @@ const RegisterPage = () => {
     setError('');
     setSuccess('');
     
-    // Manter validações existentes
     if (!allCriteriaMet) {
         setError('A senha não atende a todos os critérios.');
         return;
@@ -66,8 +64,7 @@ const RegisterPage = () => {
         return;
     }
 
-    // Construir o corpo da requisição
-    const userData = { name, email, password, type: 'client' }; // Adicionando type default
+    const userData = { name, email, password, type: 'client' };
 
     try {
       const response = await fetch(`${API_URL}/users`, {
@@ -81,25 +78,21 @@ const RegisterPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        // Se a resposta não for OK, trata como erro
         throw new Error(data.message || 'Falha no registro.');
       }
 
-      // Sucesso
       console.log('Registration successful:', data);
       setSuccess('Registro realizado com sucesso! Redirecionando para login...');
 
       setTimeout(() => {
-        router.push('/login');
+        router.push('/auth/login');
       }, 2000);
 
     } catch (err) {
-      // Captura erros da API ou de rede
       console.error('Registration error:', err);
       let errorMessage = 'Ocorreu um erro durante o registro.';
       if (err instanceof Error) {
-        // Verificar se é o erro de email duplicado
-        if (err.message.includes('UNIQUE constraint failed') || err.message.includes('already exists')) { // Adapte se a msg do backend for diferente
+        if (err.message.includes('UNIQUE constraint failed') || err.message.includes('already exists')) {
           errorMessage = 'Este email já está cadastrado. Tente fazer login.';
         } else {
           errorMessage = err.message;
@@ -269,7 +262,7 @@ const RegisterPage = () => {
 
           <div className="flex items-center justify-between">
             <div className="text-sm">
-              <Link href="/login" className="font-medium text-green-600 hover:text-green-500">
+              <Link href="/auth/login" className="font-medium text-green-600 hover:text-green-500">
                 Já tem uma conta? Faça login
               </Link>
             </div>
@@ -280,8 +273,7 @@ const RegisterPage = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!allCriteriaMet || !!success || password !== confirmPassword}
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
             >
               Registrar
             </motion.button>

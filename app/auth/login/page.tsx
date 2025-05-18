@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
+import ForgotPasswordPopup from '../_components/ForgotPasswordPopup';
 
-// Adiciona a URL base da API (se ainda não importada ou definida globalmente)
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const LoginPage = () => {
@@ -14,15 +14,15 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPasswordPopup, setShowForgotPasswordPopup] = useState(false);
   const router = useRouter();
 
-  // Modificar handleSubmit para chamar a API de login
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     try {
-      const response = await fetch(`${API_URL}/auth/login`, { // Assumindo endpoint /auth/login
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -36,15 +36,14 @@ const LoginPage = () => {
         throw new Error(data.message || 'Email ou senha inválidos.');
       }
 
-      // Sucesso - Armazenar token e informações do usuário
-      // O backend deve retornar um token JWT (ex: data.access_token)
       if (data.access_token) {
         console.log('Login successful for:', email);
-        localStorage.setItem('token', data.access_token); // Armazena o token JWT
-        // Opcional: Armazenar outras informações do usuário se retornadas pela API
-        // localStorage.setItem('userName', data.user.name);
-        
-        // Redirecionar para a página principal ou dashboard
+        localStorage.setItem('token', data.access_token);
+        if (data.user && data.user.name) {
+          localStorage.setItem('userName', data.user.name);
+        } else {
+          localStorage.removeItem('userName');
+        }
         router.push('/');
       } else {
         setError('Token de acesso não recebido.');
@@ -59,6 +58,14 @@ const LoginPage = () => {
 
   const toggleShowPassword = () => {
     setShowPassword(!showPassword);
+  };
+
+  const handleOpenForgotPasswordPopup = () => {
+    setShowForgotPasswordPopup(true);
+  };
+
+  const handleCloseForgotPasswordPopup = () => {
+    setShowForgotPasswordPopup(false);
   };
 
   return (
@@ -150,9 +157,18 @@ const LoginPage = () => {
 
           <div className="flex items-center justify-between">
             <div className="text-sm">
-              <Link href="/register" className="font-medium text-green-600 hover:text-green-500">
+              <Link href="/auth/register" className="font-medium text-green-600 hover:text-green-500">
                 Não tem uma conta? Registre-se
               </Link>
+            </div>
+            <div className="text-sm">
+              <button
+                type="button"
+                onClick={handleOpenForgotPasswordPopup}
+                className="font-medium text-green-600 hover:text-green-500"
+              >
+                Esqueci minha senha
+              </button>
             </div>
           </div>
 
@@ -168,6 +184,12 @@ const LoginPage = () => {
           </div>
         </form>
       </motion.div>
+
+      {showForgotPasswordPopup && (
+        <ForgotPasswordPopup 
+          onClose={handleCloseForgotPasswordPopup} 
+        />
+      )}
     </div>
   );
 };

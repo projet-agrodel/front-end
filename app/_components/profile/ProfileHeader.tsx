@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { User } from './types';
 
 type ProfileHeaderProps = {
@@ -7,7 +6,7 @@ type ProfileHeaderProps = {
 
 export const ProfileHeader = ({ user }: ProfileHeaderProps) => {
   return (
-    <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
+    <div className="bg-gradient-to-r from-green-600 to-green-800 p-6 text-white">
       <div className="flex flex-col md:flex-row items-center">
         <div className="relative w-24 h-24 md:w-32 md:h-32 mb-4 md:mb-0 md:mr-6">
           {user.avatar ? (
@@ -24,7 +23,7 @@ export const ProfileHeader = ({ user }: ProfileHeaderProps) => {
         </div>
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">{user.name}</h1>
-          <p className="text-blue-100">{user.type === 'admin' ? 'Administrador' : 'Cliente'}</p>
+          <p className="text-green-100">{user.type === 'admin' ? 'Administrador' : 'Cliente'}</p>
         </div>
       </div>
     </div>
