@@ -1,6 +1,6 @@
 // Serviço de busca para filtragem e pesquisa de produtos
 import Fuse from 'fuse.js';
-import { Produto } from '../CardProduto';
+import { Produto } from '@/services/interfaces/interfaces';
 
 const fuseOptions = {
   keys: ['nome'],
@@ -15,7 +15,7 @@ export const filterByCategory = (
   if (!categoria) {
     return produtos;
   }
-  return produtos.filter(p => p.categoria === categoria);
+  return produtos.filter(p => p.category?.name === categoria);
 };
 
 

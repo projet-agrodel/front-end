@@ -81,7 +81,7 @@ const getFilteredProducts = (
 // Definir limites de preço baseado nos mocks (ou API no futuro)
 // TODO: Calcular dinamicamente a partir dos dados da API se necessário
 const MIN_PRICE_LIMIT = 0;
-const MAX_PRICE_LIMIT = 100; // Ajustar se necessário baseado nos dados
+const MAX_PRICE_LIMIT = 500; 
 
 const ListarProdutos = () => {
   const router = useRouter();

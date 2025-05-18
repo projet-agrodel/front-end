@@ -27,7 +27,7 @@ function Sidebar() {
   return (
       <div className="flex h-full w-20">
         <aside 
-          className={`z-50 fixed min-h-110 h-full bg-white border-r border-gray-200 flex flex-col items-center py-4 transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'w-64 items-start' : 'w-20 items-center'}`}
+          className={`z-50 fixed min-h-127 h-full bg-white border-r border-gray-200 flex flex-col items-center py-4 transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'w-64 items-start' : 'w-20 items-center'}`}
           onMouseEnter={() => setIsExpanded(true)}
           onMouseLeave={() => setIsExpanded(false)}
         >
