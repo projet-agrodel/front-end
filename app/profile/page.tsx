@@ -139,7 +139,7 @@ const ProfilePage = () => {
       className="container mx-auto px-4 py-8 max-w-4xl animate-fade-in-up opacity-0"
       style={{ animationFillMode: 'forwards' }}
     >
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+      <div className="bg-white rounded-lg shadow-lg">
         <ProfileHeader user={userData} />
         <TabNavigation 
           tabs={tabs} 

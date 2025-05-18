@@ -1,9 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import PasswordCriteriaPopup from '../../register/PasswordCriteriaPopup';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+// Definir interface para os critérios da nova senha
+interface NewPasswordCriteria {
+  minLength: boolean;
+  uppercase: boolean;
+  number: boolean;
+}
 
 export const ChangePasswordTab: React.FC = () => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -18,6 +27,44 @@ export const ChangePasswordTab: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Estados para o popup de critérios da nova senha
+  const [isNewPasswordFocused, setIsNewPasswordFocused] = useState(false);
+  const [newPasswordCriteria, setNewPasswordCriteria] = useState<NewPasswordCriteria>({
+    minLength: false,
+    uppercase: false,
+    number: false,
+  });
+
+  // Função para validar a nova senha e atualizar os critérios para o popup
+  const validateNewPassword = (password: string): { isValid: boolean; message?: string } => {
+    const minLength = password.length >= 8;
+    const uppercase = /[A-Z]/.test(password);
+    const number = /[0-9]/.test(password);
+    
+    setNewPasswordCriteria({ minLength, uppercase, number }); // Atualiza estado para o popup
+
+    if (!minLength) {
+      return { isValid: false, message: 'A nova senha deve ter pelo menos 8 caracteres.' };
+    }
+    if (!uppercase) {
+      return { isValid: false, message: 'A nova senha deve conter pelo menos uma letra maiúscula.' };
+    }
+    if (!number) {
+      return { isValid: false, message: 'A nova senha deve conter pelo menos um número.' };
+    }
+    return { isValid: true };
+  };
+
+  // Atualizar critérios quando newPassword mudar (para o popup)
+  useEffect(() => {
+    validateNewPassword(newPassword); // Chamada para atualizar newPasswordCriteria
+  }, [newPassword]);
+
+  const handleNewPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewPassword(e.target.value);
+    // A validação para o popup agora acontece no useEffect acima
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
@@ -30,10 +77,12 @@ export const ChangePasswordTab: React.FC = () => {
       return;
     }
 
-    if (newPassword.length < 6) { // Adicionar validação de complexidade se necessário
-        setMessage('A nova senha deve ter pelo menos 6 caracteres.');
-        setIsLoading(false);
-        return;
+    // Validar a nova senha antes de prosseguir
+    const passwordValidation = validateNewPassword(newPassword);
+    if (!passwordValidation.isValid) {
+      setMessage(passwordValidation.message || 'A nova senha não atende aos critérios de segurança.');
+      setIsLoading(false);
+      return;
     }
 
     try {
@@ -130,7 +179,9 @@ export const ChangePasswordTab: React.FC = () => {
             className="appearance-none relative block w-full pl-12 pr-12 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
             placeholder="Sua nova senha"
             value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            onChange={handleNewPasswordChange}
+            onFocus={() => setIsNewPasswordFocused(true)}
+            onBlur={() => setIsNewPasswordFocused(false)}
             disabled={isLoading}
           />
           <button 
@@ -141,6 +192,9 @@ export const ChangePasswordTab: React.FC = () => {
           >
             {showNewPassword ? <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" /> : <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />}
           </button>
+          <AnimatePresence>
+            {isNewPasswordFocused && <PasswordCriteriaPopup criteria={newPasswordCriteria} />}
+          </AnimatePresence>
         </div>
 
         {/* Confirmar Nova Senha */}
