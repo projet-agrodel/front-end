@@ -6,7 +6,7 @@ type ProfileHeaderProps = {
 
 export const ProfileHeader = ({ user }: ProfileHeaderProps) => {
   return (
-    <div className="bg-gradient-to-r from-green-600 to-green-800 p-6 text-white">
+    <div className="bg-gradient-to-r from-green-600 to-green-800 p-6 text-white rounded-t-lg">
       <div className="flex flex-col md:flex-row items-center">
         <div className="relative w-24 h-24 md:w-32 md:h-32 mb-4 md:mb-0 md:mr-6">
           {user.avatar ? (

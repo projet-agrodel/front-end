@@ -50,7 +50,7 @@ const CardProduto = ({ produto }: CardProdutoProps) => {
             </span>
             
             <button
-              className="bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded-3xl text-xs transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg ml-2"
+              className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-3xl text-xs font-bold transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg ml-2"
               onClick={(e) => {
                 e.stopPropagation();
                 handleAddToCart();
