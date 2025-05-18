@@ -18,6 +18,20 @@ export const ChangePasswordTab: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Função para validar a nova senha
+  const validateNewPassword = (password: string): { isValid: boolean; message?: string } => {
+    if (password.length < 8) {
+      return { isValid: false, message: 'A nova senha deve ter pelo menos 8 caracteres.' };
+    }
+    if (!/[A-Z]/.test(password)) {
+      return { isValid: false, message: 'A nova senha deve conter pelo menos uma letra maiúscula.' };
+    }
+    if (!/[0-9]/.test(password)) {
+      return { isValid: false, message: 'A nova senha deve conter pelo menos um número.' };
+    }
+    return { isValid: true };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
@@ -30,10 +44,12 @@ export const ChangePasswordTab: React.FC = () => {
       return;
     }
 
-    if (newPassword.length < 6) { // Adicionar validação de complexidade se necessário
-        setMessage('A nova senha deve ter pelo menos 6 caracteres.');
-        setIsLoading(false);
-        return;
+    // Validar a nova senha antes de prosseguir
+    const passwordValidation = validateNewPassword(newPassword);
+    if (!passwordValidation.isValid) {
+      setMessage(passwordValidation.message || 'A nova senha não atende aos critérios de segurança.');
+      setIsLoading(false);
+      return;
     }
 
     try {
