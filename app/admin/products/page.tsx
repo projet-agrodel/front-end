@@ -287,7 +287,7 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
 
     return (
         <motion.div 
-            className="fixed inset-0 z-40 flex justify-center items-start pt-10 p-4 backdrop-blur-sm bg-black bg-opacity-50 overflow-y-auto"
+            className="fixed inset-0 z-40 flex justify-center items-start pt-10 p-4 backdrop-blur-sm bg-white bg-opacity-75 overflow-y-auto"
             variants={overlayVariants} initial="hidden" animate="visible" exit="exit"
             onClick={onClose}
         >

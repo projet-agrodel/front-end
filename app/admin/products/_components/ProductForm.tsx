@@ -31,7 +31,7 @@ interface ProductFormData {
 interface ProductFormProps {
     initialData?: Product | null; // Tornar opcional para adição
     onClose: () => void;
-    onSuccess: (productData: any) => void;
+    onSuccess: (productData: Product | Partial<Product>) => void;
 }
 
 // Variantes de animação para o modal
@@ -210,7 +210,7 @@ export default function ProductForm({ initialData, onClose, onSuccess }: Product
 
     return (
         <motion.div
-            className="fixed inset-0 z-40 flex justify-center items-center p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-40 flex justify-center items-center p-4 backdrop-blur-sm bg-white bg-opacity-75"
             variants={overlayVariants} initial="hidden" animate="visible" exit="exit"
             onClick={onClose}
         >
