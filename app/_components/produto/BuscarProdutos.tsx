@@ -23,10 +23,11 @@ const MagnifyingGlassIcon = ({ className = '' }: { className?: string }) => (
 
 interface BuscarProdutosProps {
   className?: string;
-  onSearchChange?: (termo: string) => void;
+  value: string;
+  onChange: (value: string) => void;
 }
 
-const BuscarProdutos = ({ className = '', onSearchChange }: BuscarProdutosProps) => {
+const BuscarProdutos: React.FC<BuscarProdutosProps> = ({ className, value, onChange }) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -46,8 +47,8 @@ const BuscarProdutos = ({ className = '', onSearchChange }: BuscarProdutosProps)
     updateSearchParam(termoBusca);
     
     // Optional callback for components that need immediate notification
-    if (onSearchChange) {
-      onSearchChange(termoBusca);
+    if (onChange) {
+      onChange(termoBusca);
     }
   };
   
@@ -67,26 +68,18 @@ const BuscarProdutos = ({ className = '', onSearchChange }: BuscarProdutosProps)
   };
 
   return (
-    <form onSubmit={handleSubmit} className={`flex items-center space-x-2 ${className}`}>
-      <div className="relative flex-grow">
-        <input
-          type="text"
-          placeholder="Buscar produtos..."
-          value={termoBusca}
-          onChange={(e) => setTermoBusca(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-        />
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <MagnifyingGlassIcon className="w-5 h-5 text-gray-500" />
-        </div>
+    <div className={className}>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Buscar produtos..."
+        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+      />
+      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <MagnifyingGlassIcon className="w-5 h-5 text-gray-500" />
       </div>
-      <button
-        type="submit"
-        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
-      >
-        Buscar
-      </button>
-    </form>
+    </div>
   );
 };
 

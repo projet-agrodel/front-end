@@ -1,8 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { SlidersHorizontal } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import CardProduto from './CardProduto';
 import BuscarProdutos from './BuscarProdutos';
 import FiltroPanel from './FiltroPanel';
@@ -11,12 +15,18 @@ import { Produto, Categoria } from '@/services/interfaces/interfaces';
 // Definir a URL da API
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-// Remover produtosMock
-/*
-const produtosMock: Produto[] = [...];
-*/
+// Schema de validação para os filtros
+const filterSchema = z.object({
+  categoryId: z.number().nullable(),
+  minPrice: z.number().min(0),
+  maxPrice: z.number().min(0),
+  sortOrder: z.string().nullable(),
+  searchTerm: z.string().optional(),
+});
 
-// Reativar e ajustar filterByCategory para usar o ID
+type FilterFormData = z.infer<typeof filterSchema>;
+
+// Funções de filtragem e ordenação
 const filterByCategory = (produtos: Produto[], categoryId: number | null): Produto[] => {
   if (categoryId === null) return produtos;
   return produtos.filter(p => p.category?.id === categoryId);
@@ -31,7 +41,6 @@ const searchProducts = (produtos: Produto[], termo: string): Produto[] => {
   );
 };
 
-// Adicionar filtro de preço - MANTIDO
 const filterByPrice = (produtos: Produto[], min: number | null, max: number | null): Produto[] => {
   let result = produtos;
   if (min !== null) {
@@ -43,237 +52,139 @@ const filterByPrice = (produtos: Produto[], min: number | null, max: number | nu
   return result;
 };
 
-// Adicionar lógica de ordenação - MANTIDO
 const sortProducts = (produtos: Produto[], sortOrder: string | null): Produto[] => {
-  const sorted = [...produtos]; // Cria cópia para não mutar o original
+  const sorted = [...produtos];
   if (sortOrder === 'price_asc') {
     sorted.sort((a, b) => a.price - b.price);
   } else if (sortOrder === 'price_desc') {
     sorted.sort((a, b) => b.price - a.price);
-  } 
-  // else: Nenhuma ordenação específica
+  }
   return sorted;
 };
 
-// Ajustar getFilteredProducts para usar categoryId
-const getFilteredProducts = (
-  produtos: Produto[],
-  termo: string | null,
-  categoryId: number | null, // Mudar para categoryId
-  minPrice: number | null,
-  maxPrice: number | null,
-  sortOrder: string | null
-): Produto[] => {
-  let result = [...produtos];
-
-  // Aplicar filtro de categoria
-  result = filterByCategory(result, categoryId);
-
-  if (termo && termo.trim()) {
-    result = searchProducts(result, termo);
+// Função para buscar produtos
+const fetchProducts = async (): Promise<Produto[]> => {
+  const response = await fetch(`${API_URL}/admin/products`);
+  if (!response.ok) {
+    throw new Error('Erro ao buscar produtos');
   }
-  result = filterByPrice(result, minPrice, maxPrice);
-  result = sortProducts(result, sortOrder);
-
-  return result;
+  const data = await response.json();
+  return data.map((p: Produto) => ({
+    ...p,
+    img: p.img || '/img/produtos/placeholder.png'
+  }));
 };
 
-// Definir limites de preço baseado nos mocks (ou API no futuro)
-// TODO: Calcular dinamicamente a partir dos dados da API se necessário
-const MIN_PRICE_LIMIT = 0;
-const MAX_PRICE_LIMIT = 500; 
+// Função para buscar categorias
+const fetchCategories = async (): Promise<Categoria[]> => {
+  const response = await fetch(`${API_URL}/api/categories`);
+  if (!response.ok) {
+    throw new Error('Erro ao buscar categorias');
+  }
+  return response.json();
+};
 
 const ListarProdutos = () => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   
-  // Estados:
-  const [todosOsProdutos, setTodosOsProdutos] = useState<Produto[]>([]); // Lista completa da API
-  const [produtosExibidos, setProdutosExibidos] = useState<Produto[]>([]); // Lista filtrada/ordenada para exibição
-  const [categorias, setCategorias] = useState<Categoria[]>([]); // Estado para categorias
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Estados locais
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [animationTrigger, setAnimationTrigger] = useState(0);
-  const prevFilterStateRef = useRef<string | null>(null); // Para rastrear o estado anterior dos filtros
+  const [isSearching, setIsSearching] = useState(false);
 
-  // Obter parâmetros da URL
-  const urlCategoryId = searchParams.get('category');
-  const termoBusca = searchParams.get('q') || '';
-  const urlMinPrice = searchParams.get('minPrice');
-  const urlMaxPrice = searchParams.get('maxPrice');
-  const urlSortOrder = searchParams.get('sort');
+  // React Query para buscar dados
+  const { data: produtos, isLoading: isLoadingProdutos, error: produtosError } = useQuery({
+    queryKey: ['produtos'],
+    queryFn: fetchProducts
+  });
 
-  // Estados para filtros (inicializados com valores da URL ou padrão)
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
-    urlCategoryId ? parseInt(urlCategoryId, 10) : null
-  );
-  const [minPrice, setMinPrice] = useState<number>(urlMinPrice ? parseInt(urlMinPrice, 10) : MIN_PRICE_LIMIT);
-  const [maxPrice, setMaxPrice] = useState<number>(urlMaxPrice ? parseInt(urlMaxPrice, 10) : MAX_PRICE_LIMIT);
-  const [sortOrder, setSortOrder] = useState<string | null>(urlSortOrder);
+  const { data: categorias, isLoading: isLoadingCategorias } = useQuery({
+    queryKey: ['categorias'],
+    queryFn: fetchCategories
+  });
 
-  // Funções para atualizar URL (mantidas como estavam)
-  const updatePriceParams = (newMin: number, newMax: number) => {
-    const newParams = new URLSearchParams(searchParams.toString());
-    newParams.set('minPrice', newMin.toString());
-    newParams.set('maxPrice', newMax.toString());
-    setMinPrice(newMin);
-    setMaxPrice(newMax);
-    const newUrl = `${pathname}?${newParams.toString()}`;
-    router.push(newUrl, { scroll: false });
-  };
-
-  // Modificar updateCategoryParam para usar ID
-  const updateCategoryParam = (categoryId: number | null) => {
-    const newParams = new URLSearchParams(searchParams.toString());
-    if (categoryId !== null) {
-      newParams.set('category', categoryId.toString());
-    } else {
-      newParams.delete('category');
+  // React Hook Form
+  const { register, handleSubmit, watch, setValue, reset } = useForm<FilterFormData>({
+    resolver: zodResolver(filterSchema),
+    defaultValues: {
+      categoryId: searchParams.get('category') ? parseInt(searchParams.get('category')!, 10) : null,
+      minPrice: searchParams.get('minPrice') ? parseInt(searchParams.get('minPrice')!, 10) : 0,
+      maxPrice: searchParams.get('maxPrice') ? parseInt(searchParams.get('maxPrice')!, 10) : 500,
+      sortOrder: searchParams.get('sort'),
+      searchTerm: searchParams.get('q') || '',
     }
-    setSelectedCategoryId(categoryId); // Atualizar estado local
-    const newUrl = newParams.toString() ? `${pathname}?${newParams.toString()}` : pathname;
-    router.push(newUrl, { scroll: false });
-  };
+  });
 
-  const updateSortParam = (newSortOrder: string | null) => {
-    const newParams = new URLSearchParams(searchParams.toString());
-    if (newSortOrder) {
-      newParams.set('sort', newSortOrder);
-    } else {
-      newParams.delete('sort');
-    }
-    setSortOrder(newSortOrder);
-    const newUrl = `${pathname}?${newParams.toString()}`;
-    router.push(newUrl, { scroll: false });
-  };
+  // Observar mudanças nos filtros
+  const filters = watch();
 
-  // useEffect para buscar dados da API (produtos E categorias)
+  // Efeito para sincronizar URL com o formulário
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        // Buscar produtos e categorias em paralelo
-        const [productsResponse, categoriesResponse] = await Promise.all([
-          fetch(`${API_URL}/products`),
-          fetch(`${API_URL}/categories`)
-        ]);
+    const categoryId = searchParams.get('category');
+    const minPrice = searchParams.get('minPrice');
+    const maxPrice = searchParams.get('maxPrice');
+    const sortOrder = searchParams.get('sort');
+    const searchTerm = searchParams.get('q');
 
-        if (!productsResponse.ok) {
-          throw new Error(`Erro ao buscar produtos: ${productsResponse.status}`);
-        }
-        if (!categoriesResponse.ok) {
-          throw new Error(`Erro ao buscar categorias: ${categoriesResponse.status}`);
-        }
-
-        const productsData: Produto[] = await productsResponse.json();
-        const categoriesData: Categoria[] = await categoriesResponse.json();
-
-        // Adicionar imagem placeholder aos produtos
-        const productsWithImages = productsData.map(p => ({
-          ...p,
-          img: p.img || '/img/produtos/placeholder.png'
-        }));
-
-        setTodosOsProdutos(productsWithImages);
-        setCategorias(categoriesData);
-
-      } catch (err) {
-        console.error('Erro ao buscar dados da API:', err);
-        setError('Falha ao carregar dados. Tente novamente.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    if (isLoading) {
-      return;
-    }
-
-    const currentFilterState = JSON.stringify({
-      termoBusca,
-      urlCategoryId,
-      urlMinPrice,
-      urlMaxPrice,
-      urlSortOrder,
-      todosOsProdutosCount: todosOsProdutos.length
+    reset({
+      categoryId: categoryId ? parseInt(categoryId, 10) : null,
+      minPrice: minPrice ? parseInt(minPrice, 10) : 0,
+      maxPrice: maxPrice ? parseInt(maxPrice, 10) : 500,
+      sortOrder: sortOrder,
+      searchTerm: searchTerm || '',
     });
+  }, [searchParams, reset]);
 
-    if (todosOsProdutos.length > 0) {
-      const categoryIdFromUrl = urlCategoryId ? parseInt(urlCategoryId, 10) : null;
-      const minPriceFromUrl = urlMinPrice ? parseInt(urlMinPrice, 10) : null;
-      const maxPriceFromUrl = urlMaxPrice ? parseInt(urlMaxPrice, 10) : null;
-      
-      const produtosFiltrados = getFilteredProducts(
-        todosOsProdutos,
-        termoBusca,
-        categoryIdFromUrl, 
-        minPriceFromUrl,
-        maxPriceFromUrl,
-        urlSortOrder
-      );
-      setProdutosExibidos(produtosFiltrados);
+  // Aplicar filtros aos produtos
+  const produtosFiltrados = produtos ? (() => {
+    if (!isSearching) return produtos;
+    
+    let result = [...produtos];
+    result = filterByCategory(result, filters.categoryId);
+    result = searchProducts(result, filters.searchTerm || '');
+    result = filterByPrice(result, filters.minPrice, filters.maxPrice);
+    result = sortProducts(result, filters.sortOrder);
+    return result;
+  })() : [];
 
-      if (prevFilterStateRef.current !== currentFilterState) {
-        setAnimationTrigger(prev => prev + 1); 
-      }
-    } else if (todosOsProdutos.length === 0 && !isLoading) { 
-      setProdutosExibidos([]);
-      if (prevFilterStateRef.current !== currentFilterState) {
-        //setAnimationTrigger(prev => prev + 1); // Descomente se quiser "animar" a entrada do estado "Nenhum produto"
-      }
-    }
+  // Handlers
+  const handleSearch = () => {
+    setIsSearching(true);
+    const newParams = new URLSearchParams();
+    
+    if (filters.categoryId) newParams.set('category', filters.categoryId.toString());
+    if (filters.minPrice > 0) newParams.set('minPrice', filters.minPrice.toString());
+    if (filters.maxPrice < 500) newParams.set('maxPrice', filters.maxPrice.toString());
+    if (filters.sortOrder) newParams.set('sort', filters.sortOrder);
+    if (filters.searchTerm) newParams.set('q', filters.searchTerm);
 
-    prevFilterStateRef.current = currentFilterState;
-
-  }, [todosOsProdutos, termoBusca, urlCategoryId, urlMinPrice, urlMaxPrice, urlSortOrder, isLoading]);
-
-
-  // Handlers (mantidos como estavam, pois atualizam a URL que dispara o useEffect de filtragem)
-  const handleCategoryChange = (categoryId: number | null) => {
-    updateCategoryParam(categoryId);
-  };
-  const handlePriceChange = (value: number | number[]) => {
-    if (Array.isArray(value)) {
-      const [newMin, newMax] = value;
-      updatePriceParams(newMin, newMax);
-    }
-  };
-  const handleSortChange = (newSortOrder: string | null) => {
-    updateSortParam(newSortOrder);
-  };
-  const toggleFilterPanel = () => {
-    setIsFilterPanelOpen(prev => !prev);
-  };
-  const handleApplyFilters = () => {
-    setIsFilterPanelOpen(false);
-  };
-  const handleClearFilters = () => {
-    const newParams = new URLSearchParams(searchParams.toString());
-    newParams.delete('category');
-    newParams.delete('minPrice');
-    newParams.delete('maxPrice');
-    newParams.delete('sort');
     const newUrl = newParams.toString() ? `${pathname}?${newParams.toString()}` : pathname;
-    setSelectedCategoryId(null); // Limpar estado local
     router.push(newUrl, { scroll: false });
-    setIsFilterPanelOpen(false); 
+    setAnimationTrigger(prev => prev + 1);
+  };
+
+  const handleClearFilters = () => {
+    setIsSearching(false);
+    reset({
+      categoryId: null,
+      minPrice: 0,
+      maxPrice: 500,
+      sortOrder: null,
+      searchTerm: '',
+    });
+    router.push(pathname, { scroll: false });
+    setAnimationTrigger(prev => prev + 1);
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Barra de busca, filtro e ordenação (mantida) */}
+      {/* Barra de busca e filtros */}
       <div className="mb-8 flex justify-center items-center gap-4">
-        {/* Botão e Painel de Filtro (mantido) */}
         <div className="relative">
           <button
-            onClick={toggleFilterPanel}
+            onClick={() => setIsFilterPanelOpen(true)}
             className="p-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
             aria-label="Abrir filtros"
           >
@@ -281,54 +192,67 @@ const ListarProdutos = () => {
           </button>
           <FiltroPanel 
             isOpen={isFilterPanelOpen} 
-            onClose={handleApplyFilters}
-            categories={categorias} // Passa categorias da API
-            selectedCategoryId={selectedCategoryId} // Passa ID selecionado
-            onCategoryChange={handleCategoryChange} // Handler usa ID
-            minPrice={minPrice} 
-            maxPrice={maxPrice}
-            minPriceLimit={MIN_PRICE_LIMIT}
-            maxPriceLimit={MAX_PRICE_LIMIT}
-            onPriceChange={handlePriceChange}
+            onClose={() => setIsFilterPanelOpen(false)}
+            categories={categorias || []}
+            selectedCategoryId={filters.categoryId}
+            onCategoryChange={(id) => setValue('categoryId', id)}
+            minPrice={filters.minPrice}
+            maxPrice={filters.maxPrice}
+            minPriceLimit={0}
+            maxPriceLimit={500}
+            onPriceChange={(value) => {
+              if (Array.isArray(value)) {
+                setValue('minPrice', value[0]);
+                setValue('maxPrice', value[1]);
+              }
+            }}
             onClearFilters={handleClearFilters}
-            currentSortOrder={sortOrder}
-            onSortChange={handleSortChange}
+            currentSortOrder={filters.sortOrder}
+            onSortChange={(order) => setValue('sortOrder', order)}
           />
         </div>
 
-        {/* Barra de Busca (mantida) */}
-        <BuscarProdutos className="flex-grow max-w-xl" />
+        <div className="flex-grow max-w-xl flex gap-2">
+          <BuscarProdutos 
+            className="flex-grow"
+            value={filters.searchTerm || ""}
+            onChange={(value) => setValue('searchTerm', value)}
+          />
+          <button
+            onClick={handleSearch}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+          >
+            Buscar
+          </button>
+        </div>
       </div>
-      
-      {/* Exibição dos Produtos (lógica mantida, usa produtosExibidos) */}
-      {isLoading ? (
+
+      {/* Exibição dos Produtos */}
+      {isLoadingProdutos || isLoadingCategorias ? (
         <div className="flex justify-center items-center py-20">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
         </div>
-      ) : error ? (
+      ) : produtosError ? (
         <div className="text-center py-20">
-          <p className="text-red-600 text-xl">{error}</p>
+          <p className="text-red-600 text-xl">Erro ao carregar produtos</p>
           <button 
-            onClick={() => window.location.reload()} // Ou chamar a função de fetch novamente
+            onClick={() => window.location.reload()}
             className="mt-4 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700"
           >
             Tentar novamente
           </button>
         </div>
-      ) : produtosExibidos.length > 0 ? (
+      ) : produtosFiltrados.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {produtosExibidos.map((produto, index) => {
-            return (
-              <div 
-                key={`${animationTrigger}-${produto.id}`} // Usar animationTrigger e produto.id na key
-                className={`animate-fade-in-up opacity-0 delay-${Math.min(index, 15)}`} 
-                style={{ animationFillMode: 'forwards' }}
-              >
-                {/* Remover prop categoryColor - CardProduto determina internamente */}
-                <CardProduto produto={{...produto, img: produto.img || '/img/produtos/placeholder.png'}} /> 
-              </div>
-            );
-          })}
+          {produtosFiltrados.map((produto, index) => (
+            <div 
+              key={`${animationTrigger}-${produto.id}`}
+              className={`animate-fade-in-up opacity-0 delay-${Math.min(index, 15)}`}
+              style={{ animationFillMode: 'forwards' }}
+            >
+              <CardProduto produto={produto} />
+            </div>
+          ))}
         </div>
       ) : (
         <div className="text-center py-20">
