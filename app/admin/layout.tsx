@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  LayoutDashboard, ShoppingCart, Package, Users, Tag, Settings, LogOut, Bell, UserCircle
+  LayoutDashboard, ShoppingCart, Package, Users, Tag, Settings, LogOut, Bell, UserCircle, MessageSquare
 } from 'lucide-react'; // Importar ícones reais
 
 // Hook para obter o pathname (necessário para link ativo)
@@ -20,6 +20,7 @@ function Sidebar() {
     { name: 'Produtos', href: '/admin/products', icon: Package },
     { name: 'Pedidos', href: '/admin/orders', icon: ShoppingCart },
     { name: 'Clientes', href: '/admin/customers', icon: Users },
+    { name: 'Tickets', href: '/admin/tickets', icon: MessageSquare },
     { name: 'Categorias', href: '/admin/categories', icon: Tag },
     { name: 'Configurações', href: '/admin/settings', icon: Settings },
   ];
