@@ -1,4 +1,4 @@
-import { TicketPriority, TicketStatus } from "./types";
+import { TicketPriority, TicketStatus, TypeUser } from "../types/types";
 
 // Tipo base para timestamps
 interface Timestamps {
@@ -12,7 +12,7 @@ export interface User extends Timestamps {
   email: string;
   password: string;
   phone: string;
-  type: 'admin' | 'client';
+  type: TypeUser;
 
   // Relacionamentos
   cartoes?: Cartao[];

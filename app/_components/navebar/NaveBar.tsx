@@ -3,51 +3,29 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import { useCart } from '@/contexts/CartContext';
-import { ShoppingCartIcon, UserCircle2 } from 'lucide-react';
+import { ShoppingCartIcon, UserCircle2, LogOut, User, Settings, Shield } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Navbar = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName, setUserName] = useState('');
+  const { data: session } = useSession();
   const { totalItems } = useCart();
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUserName = localStorage.getItem('userName');
-    
-    setIsLoggedIn(!!token);
-    if (token && storedUserName) {
-      setUserName(storedUserName);
-    } else if (token && !storedUserName) {
-    }
-
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'token' || event.key === 'userName') {
-        const currentToken = localStorage.getItem('token');
-        const currentUserName = localStorage.getItem('userName');
-        setIsLoggedIn(!!currentToken);
-        setUserName(currentUserName || '');
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-
-  }, [pathname]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userName');
-    setIsLoggedIn(false);
-    setUserName('');
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
     router.push('/auth/login');
-    router.refresh();
   };
 
   return (
@@ -91,26 +69,75 @@ const Navbar = () => {
               >
                 Produtos
               </Link>
+
+              {session?.user?.role === 'admin' && (
+                <Link 
+                  href='/admin'
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    pathname.startsWith('/admin') 
+                      ? 'bg-green-500 text-white' 
+                      : 'text-gray-700 hover:bg-green-100'
+                  }`}
+                >
+                  Admin
+                </Link>
+              )}
             </div>
           </div>
           
-          {/* Auth Links */}
-          <div className="hidden md:flex items-center space-x-4">
-            {isLoggedIn ? (
-              <>
-                <Link href="/profile" className="flex items-center text-gray-700 hover:text-green-600 transition-colors duration-200">
-                  <UserCircle2 className="h-6 w-6 mr-2" />
-                  <span className="text-sm font-medium">{userName || 'Meu Perfil'}</span>
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-red-100 hover:text-red-600"
-                >
-                  Sair
-                </button>
-              </>
+          <div className="flex items-center space-x-4">
+            <Link href="/carrinho" className="relative text-gray-600 hover:text-green-600 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200">
+              <ShoppingCartIcon className="h-6 w-6" />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 block h-5 w-5 rounded-full ring-2 ring-white bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                  {totalItems}
+                </span>
+              )}
+            </Link>
+
+            {session ? (
+              <DropdownMenu >
+                <DropdownMenuTrigger className='z-[9999]' asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={session.user?.image || ''} alt={session.user?.name || ''} />
+                      <AvatarFallback>{session.user?.name?.charAt(0) || 'U'}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 z-[9999999]" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{session.user?.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {session.user?.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push('/profile')}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Perfil</span>
+                  </DropdownMenuItem>
+                  {session.user?.role === 'admin' && (
+                    <DropdownMenuItem onClick={() => router.push('/admin')}>
+                      <Shield className="mr-2 h-4 w-4" />
+                      <span>Painel Admin</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => router.push('/profile/settings')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Configurações</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sair</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
-              <>
+              <div className="flex items-center space-x-2">
                 <Link
                   href="/auth/login"
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
@@ -131,58 +158,8 @@ const Navbar = () => {
                 >
                   Registrar
                 </Link>
-              </>
-            )}
-
-            {/* Ícone do Carrinho */}
-            <Link href="/carrinho" className="relative text-gray-600 hover:text-green-600 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200">
-              <ShoppingCartIcon className="h-6 w-6" />
-              {totalItems > 0 && (
-                <span className="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-red-500 text-white text-xs font-bold flex items-center justify-center">
-                  {totalItems}
-                </span>
-              )}
-            </Link>
-          </div>
-          
-          <div className="md:hidden flex items-center">
-            {/* Ícone do Carrinho (Mobile) */}
-            <Link href="/carrinho" className="relative text-gray-600 hover:text-green-600 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 mr-2">
-              <ShoppingCartIcon className="h-6 w-6" />
-              {totalItems > 0 && (
-                <span className="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-red-500 text-white text-xs font-bold flex items-center justify-center">
-                  {totalItems}
-                </span>
-              )}
-            </Link>
-
-            {/* Mobile Auth Links/Button */} 
-             {isLoggedIn ? (
-              <div className="flex items-center">
-                <Link href="/profile" className="p-2 text-gray-700 hover:text-green-600">
-                  <UserCircle2 className="h-6 w-6" />
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-red-100 hover:text-red-600"
-                >
-                  Sair
-                </button>
               </div>
-             ) : (
-                <Link
-                  href="/auth/login"
-                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-green-100"
-                >
-                  Login
-                </Link>
-             )} 
-            {/* Menu móvel (placeholder) */}
-            {/* <button className="ml-4 text-gray-700 hover:text-green-500">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button> */}
+            )}
           </div>
         </div>
       </div>

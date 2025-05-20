@@ -10,7 +10,7 @@ import { PlusIcon } from '@/app/_components/icons/plus';
 import { Ticket } from '@/services/interfaces/interfaces';
 import { MessageSquare, Search, Filter, Clock, CheckCircle, AlertCircle, XCircle, LucideProps } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { TicketPriority, TicketStatus } from '@/services/interfaces/types';
+import { TicketPriority, TicketStatus } from '@/services/types/types';
 
 const mockTickets = [
   {

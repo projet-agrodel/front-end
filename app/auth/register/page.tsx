@@ -9,6 +9,7 @@ import { User, Mail, Lock, Eye, EyeOff, Check, AlertCircle } from 'lucide-react'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { signIn } from 'next-auth/react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -78,12 +79,15 @@ const RegisterPage = () => {
         throw new Error(responseData.message || 'Falha no registro.');
       }
 
-      console.log('Registration successful:', responseData);
+      await signIn("credentials", {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+     });
+
       setSuccess('Registro realizado com sucesso! Redirecionando para login...');
 
-      setTimeout(() => {
-        router.push('/auth/login');
-      }, 2000);
+      router.replace('/');
 
     } catch (err) {
       console.error('Registration error:', err);
