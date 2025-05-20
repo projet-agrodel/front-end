@@ -19,8 +19,7 @@ const getAuthTokenForAdmin = (): string | null => {
         // Exemplo: return localStorage.getItem('adminAuthToken');
         // Por agora, retornando um token mockado. REMOVER EM PRODUÇÃO.
         
-        // IMPORTANTE: Substitua a string abaixo pelo token JWT de 3 partes gerado!
-        return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc0NzYxODA5OCwianRpIjoiYmI3ZGM2YTgtMTlmNy00NmNiLTlkNWItN2UzYjNlYWY3OTY5IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjMiLCJuYmYiOjE3NDc2MTgwOTgsImNzcmYiOiI3MjU5ZmQyMC1iYzlmLTRiNGQtYmU0Ny1kZmRhY2M3NDNjMjYiLCJleHAiOjE3NDc2MjE2OTgsImlzX2FkbWluaXN0cmF0b3IiOnRydWV9.n5ufkRs-Dk1g3FU-Q3fLhIVlpUzBWf5Abcmn3EIcMZM'; 
+        return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc0Nzc3NTQ1MSwianRpIjoiNDI3MGFmYjctY2JjZS00ZmJmLTk3OWItZTNjZTQ5NjdlMTk1IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjMiLCJuYmYiOjE3NDc3NzU0NTEsImNzcmYiOiJkNTU1OWQyYi0yZTdhLTQ1OGMtYTk5Mi0yYTk3YmI0OGQ4ZDAiLCJleHAiOjE3NDc3NzkwNTEsImlzX2FkbWluaXN0cmF0b3IiOnRydWV9.O4VFL-WhlTt8OwmcDEDRvXvplnPMkKBloJjQ5Xte4e0'; 
     }
     return null;
 };
@@ -40,9 +39,6 @@ interface DisplayProduct {
     category?: { id: number; name: string }; // AdminProduct tem category | null, aqui pode ser opcional
     createdAt?: string | Date; // Pode ser string ou Date dependendo da transformação
     updatedAt?: string | Date;
-
-    // Campos adicionais específicos para DisplayProduct (se houver)
-    // categoryName?: string; // Se categoryName for usado, deve ser populado na transformação
 }
 
 // Componente simples de Modal de Confirmação
@@ -75,7 +71,7 @@ function ConfirmationModal({
 
     return (
         <motion.div
-            className="fixed inset-0 z-50 flex justify-center items-center p-4 backdrop-blur-sm bg-black bg-opacity-50"
+            className="fixed inset-0 z-50 flex justify-center items-center p-4 backdrop-blur-sm bg-transparent bg-opacity-50"
             variants={overlayVariants} initial="hidden" animate="visible" exit="exit"
             onClick={onCancel} // Fecha ao clicar fora
         >
@@ -287,7 +283,7 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
 
     return (
         <motion.div 
-            className="fixed inset-0 z-40 flex justify-center items-start pt-10 p-4 backdrop-blur-sm bg-white bg-opacity-75 overflow-y-auto"
+            className="fixed inset-0 z-40 flex justify-center items-start pt-10 p-4 backdrop-blur-sm bg-transparent bg-opacity-75 overflow-y-auto"
             variants={overlayVariants} initial="hidden" animate="visible" exit="exit"
             onClick={onClose}
         >
@@ -306,25 +302,25 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
                     {/* Campos existentes */}
                     <div>
                         <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Nome do Produto</label>
-                        <input type="text" name="name" id="name" value={formData.name || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                        <input type="text" name="name" id="name" value={formData.name || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" />
                     </div>
                     <div>
                         <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
-                        <textarea name="description" id="description" value={formData.description || ''} onChange={handleChange} required rows={3} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+                        <textarea name="description" id="description" value={formData.description || ''} onChange={handleChange} required rows={3} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"></textarea>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"> {/* Ajustado gap */}
                         <div>
                             <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">Preço (R$)</label>
-                            <input type="text" name="price" id="price" value={formData.price === null || formData.price === undefined ? '' : String(formData.price)} onChange={handleChange} required placeholder="Ex: 25.99" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                            <input type="text" name="price" id="price" value={formData.price === null || formData.price === undefined ? '' : String(formData.price)} onChange={handleChange} required placeholder="Ex: 25.99" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" />
                         </div>
                         <div>
                             <label htmlFor="originalPrice" className="block text-sm font-medium text-gray-700 mb-1">Preço Original (R$) <span className="text-xs text-gray-500">(Opcional)</span></label>
-                            <input type="text" name="originalPrice" id="originalPrice" value={formData.originalPrice === null || formData.originalPrice === undefined ? '' : String(formData.originalPrice)} onChange={handleChange} placeholder="Ex: 30.00" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                            <input type="text" name="originalPrice" id="originalPrice" value={formData.originalPrice === null || formData.originalPrice === undefined ? '' : String(formData.originalPrice)} onChange={handleChange} placeholder="Ex: 30.00" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" />
                         </div>
                         <div>
                             <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">Estoque</label>
-                            <input type="number" name="stock" id="stock" value={formData.stock === null || formData.stock === undefined ? '' : formData.stock} onChange={handleChange} required min="0" step="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                            <input type="number" name="stock" id="stock" value={formData.stock === null || formData.stock === undefined ? '' : formData.stock} onChange={handleChange} required min="0" step="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" />
                         </div>
                         <div>
                             <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
@@ -333,7 +329,7 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
                                 id="category_id" 
                                 value={formData.category_id !== undefined ? String(formData.category_id) : ''} 
                                 onChange={handleChange} 
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
                             >
                                 <option value="">Selecione uma categoria</option>
                                 {categories.map(cat => (
@@ -343,7 +339,7 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
                         </div>
                         <div>
                             <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                            <select name="status" id="status" value={formData.status || 'Ativo'} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <select name="status" id="status" value={formData.status || 'Ativo'} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm">
                                 <option value="Ativo">Ativo</option>
                                 <option value="Inativo">Inativo</option>
                             </select>
@@ -351,7 +347,7 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
                          <div> {/* Container para alinhar o checkbox com outros campos */}
                             <label htmlFor="isPromotion" className="block text-sm font-medium text-gray-700 mb-1 invisible">Promoção</label> {/* Label invisível para alinhar */}
                             <div className="flex items-center mt-1 pt-2"> {/* Ajuste de margem para alinhar com inputs */}
-                                <input id="isPromotion" name="isPromotion" type="checkbox" checked={formData.isPromotion || false} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+                                <input id="isPromotion" name="isPromotion" type="checkbox" checked={formData.isPromotion || false} onChange={handleChange} className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500" />
                                 <label htmlFor="isPromotion" className="ml-2 block text-sm font-medium text-gray-700">Em Promoção?</label>
                             </div>
                         </div>
@@ -359,12 +355,12 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
                     
                     <div>
                         <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 mb-1">URL da Imagem <span className="text-xs text-gray-500">(Opcional)</span></label>
-                        <input type="text" name="imageUrl" id="imageUrl" value={formData.imageUrl || ''} onChange={handleChange} placeholder="https://exemplo.com/imagem.jpg" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                        <input type="text" name="imageUrl" id="imageUrl" value={formData.imageUrl || ''} onChange={handleChange} placeholder="https://exemplo.com/imagem.jpg" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" />
                     </div>
 
                     <div className="flex justify-end gap-4 pt-6"> {/* Aumentado pt e gap */}
                         <button type="button" onClick={onClose} className="px-6 py-2.5 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium text-sm transition-colors">Cancelar</button>
-                        <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 font-medium text-sm transition-colors">
+                        <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 font-medium text-sm transition-colors">
                             {isSubmitting ? "Salvando..." : (initialData?.id ? "Salvar Alterações" : "Adicionar Produto")}
                         </button>
                     </div>
@@ -521,11 +517,11 @@ export default function AdminProductsPage() {
       {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-semibold text-gray-800 flex items-center">
-          <Package size={28} className="mr-3 text-indigo-600" /> Gerenciamento de Produtos
+          <Package size={28} className="mr-3 text-green-600" /> Gerenciamento de Produtos
         </h1>
         <button
           onClick={() => { setEditingProduct(null); setIsFormModalOpen(true); }}
-          className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-150"
+          className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150"
         >
           <PlusCircle size={18} className="mr-2" />
           Adicionar Produto
@@ -544,7 +540,7 @@ export default function AdminProductsPage() {
                     type="text"
                     id="search"
                     name="search"
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-green-500 focus:border-green-500 sm:text-sm"
                     placeholder="Buscar por nome ou descrição..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -556,7 +552,7 @@ export default function AdminProductsPage() {
             <select
                 id="categoryFilter"
                 name="categoryFilter"
-                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
                 value={selectedCategoryFilter}
                 onChange={(e) => setSelectedCategoryFilter(e.target.value)}
             >
@@ -594,7 +590,7 @@ export default function AdminProductsPage() {
           <p className="text-sm text-gray-500 mt-1">
             {searchTerm || selectedCategoryFilter ? "Tente ajustar seus filtros ou " : "Comece adicionando um novo produto."}
             {!searchTerm && !selectedCategoryFilter && 
-                <button onClick={() => { setEditingProduct(null); setIsFormModalOpen(true); }} className="text-indigo-600 hover:text-indigo-500 font-medium">
+                <button onClick={() => { setEditingProduct(null); setIsFormModalOpen(true); }} className="text-green-600 hover:text-green-500 font-medium">
                     adicionar um produto
                 </button>
             }
