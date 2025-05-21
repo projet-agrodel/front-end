@@ -4,10 +4,9 @@ import { CarrinhoItem, Produto } from '@/services/interfaces/interfaces';
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 
-// Definir a URL da API (se ainda não estiver globalmente acessível)
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-// Interface para o valor do contexto do carrinho
 interface CartContextType {
   cartItems: CarrinhoItem[];
   addToCart: (product: Produto, quantityToAdd?: number) => Promise<void>;
@@ -46,9 +45,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Função para verificar a disponibilidade de estoque de um produto
   const checkProductAvailability = useCallback(async (productId: number, quantityRequested: number): Promise<{ available: boolean; currentStock: number }> => {
-    // Se não houver quantidade solicitada, assume-se que está disponível
     if (quantityRequested <= 0) {
       return { available: true, currentStock: 0 };
     }
@@ -209,6 +206,38 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       // Atualizar o objeto do produto com o estoque atual do servidor
       const updatedProduct = { ...product, stock: availability.currentStock };
 
+      // Encontrar o produto no carrinho atual (se existir)
+      const existingItemIndex = cartItems.findIndex(item => item.produto_id === product.id);
+
+      // Atualização otimista local imediata
+      if (existingItemIndex > -1) {
+        // Produto já existe no carrinho, atualizar quantidade
+        const newQuantity = cartItems[existingItemIndex].quantity + validQuantity;
+        // Verificar se a nova quantidade não ultrapassa o estoque
+        const finalQuantity = Math.min(newQuantity, availability.currentStock);
+        
+        setCartItems(prevItems => {
+          const updatedItems = [...prevItems];
+          updatedItems[existingItemIndex] = {
+            ...updatedItems[existingItemIndex],
+            quantity: finalQuantity,
+            produto: updatedProduct
+          };
+          return updatedItems;
+        });
+      } else {
+        // Produto não existe no carrinho, adicionar novo item
+        setCartItems(prevItems => [
+          ...prevItems,
+          {
+            produto_id: product.id,
+            carrinho_id: 0, // será atualizado quando vier a resposta da API
+            quantity: validQuantity,
+            produto: updatedProduct
+          }
+        ]);
+      }
+
       if (status === 'authenticated' && session?.accessToken) {
         try {
           console.log(`API: Adicionando ao carrinho - ID do produto: ${product.id}, Qtd: ${validQuantity}`);
@@ -234,46 +263,17 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
             }
             throw new Error(errorData.message || `Erro HTTP ${response.status} ao adicionar ao carrinho`);
           }
-          
-          // Buscar o carrinho atualizado do backend (para garantir consistência)
+
           await fetchApiCart();
           
         } catch (err) {
           console.error("Erro ao adicionar ao carrinho:", err);
           setError(err instanceof Error ? err.message : 'Erro ao adicionar ao carrinho.');
+
+          await fetchApiCart();
         }
       } else {
-        // Lógica para usuários não logados (localStorage)
-        setCartItems(prevItems => {
-          const existingItemIndex = prevItems.findIndex(item => item.produto_id === updatedProduct.id);
-          let newQuantity = validQuantity;
-          if (existingItemIndex > -1) {
-            newQuantity = prevItems[existingItemIndex].quantity + validQuantity;
-          }
-          
-          // Já verificamos a disponibilidade, mas vamos garantir que não excedemos o estoque
-          if (newQuantity > updatedProduct.stock) {
-            newQuantity = updatedProduct.stock;
-            if (newQuantity <= 0) return prevItems.filter(item => item.produto_id !== updatedProduct.id);
-          }
 
-          if (existingItemIndex > -1) {
-            const updatedItems = [...prevItems];
-            updatedItems[existingItemIndex] = { 
-              ...updatedItems[existingItemIndex], 
-              quantity: newQuantity,
-              produto: updatedProduct // Atualiza o produto com o estoque atual
-            };
-            return updatedItems;
-          } else {
-            return [...prevItems, { 
-              produto_id: updatedProduct.id, 
-              carrinho_id: 0, 
-              quantity: newQuantity, 
-              produto: updatedProduct 
-            }];
-          }
-        });
       }
     } catch (err) {
       console.error("Erro na verificação de disponibilidade:", err);
@@ -283,45 +283,50 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
   };
 
-  // Atualizar quantidade
-  const updateQuantity = async (productId: number, quantity: number) => {
-    setIsLoading(true);
-    setError(null);
-    
-    const newQuantity = Math.max(0, quantity);
-    
-    // Se quantidade for zero, removemos o item
-    if (newQuantity === 0) {
+  const updateQuantity = async (productId: number, quantity: number): Promise<void> => {
+    if (quantity <= 0) {
       await removeFromCart(productId);
       return;
     }
     
     try {
-      // Verificar a disponibilidade atual do produto para a nova quantidade
-      const availability = await checkProductAvailability(productId, newQuantity);
+      const availability = await checkProductAvailability(productId, quantity);
       
       if (!availability.available) {
-        setError(`Estoque insuficiente. Disponível: ${availability.currentStock}. Solicitado: ${newQuantity}`);
-        setIsLoading(false);
+        setError(`Estoque insuficiente. Disponível: ${availability.currentStock}. Solicitado: ${quantity}`);
+        setCartItems(prevItems =>
+          prevItems.map(item =>
+            item.produto_id === productId ? { 
+              ...item, 
+              quantity: Math.min(quantity, availability.currentStock),
+              produto: item.produto ? {...item.produto, stock: availability.currentStock} : undefined
+            } : item
+          )
+        );
         return;
       }
-      
-      // Encontrar o produto no carrinho atual
+
       const targetItem = cartItems.find(item => item.produto_id === productId);
       
       if (!targetItem) {
         setError("Produto não encontrado no carrinho.");
-        setIsLoading(false);
         return;
       }
       
-      // Atualizar o objeto do produto com o estoque atual
       const updatedProduct = targetItem.produto ? { ...targetItem.produto, stock: availability.currentStock } : undefined;
 
+      setCartItems(prevItems =>
+        prevItems.map(item =>
+          item.produto_id === productId ? { 
+            ...item, 
+            quantity, 
+            produto: updatedProduct
+          } : item
+        )
+      );
+
       if (status === 'authenticated' && session?.accessToken) {
-        try {
-          console.log(`API: Atualizando quantidade - ID do produto: ${productId}, Qtd: ${newQuantity}`);
-          
+        try {          
           // Chamada à API para atualizar a quantidade
           const response = await fetch(`${API_URL}/api/cart/item/${productId}`, {
             method: 'PUT',
@@ -329,7 +334,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${session.accessToken}`
             },
-            body: JSON.stringify({ quantity: newQuantity })
+            body: JSON.stringify({ quantity })
           });
           
           if (!response.ok) {
@@ -341,7 +346,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
             throw new Error(errorData.message || `Erro HTTP ${response.status} ao atualizar quantidade`);
           }
           
-          // Atualizar com a resposta da API
+          // Atualizar com a resposta da API (caso haja alguma diferença)
           const updatedItem = await response.json();
           
           setCartItems(prevItems => 
@@ -357,22 +362,12 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           await fetchApiCart();
         }
       } else {
-        // Lógica para usuários não logados (localStorage)
-        setCartItems(prevItems =>
-          prevItems.map(item =>
-            item.produto_id === productId ? { 
-              ...item, 
-              quantity: newQuantity,
-              produto: updatedProduct // Atualizar com o estoque atual, se disponível
-            } : item
-          )
-        );
+        // Para usuários não logados, já fizemos a atualização otimista acima
+        localStorage.setItem('cart', JSON.stringify(cartItems));
       }
     } catch (err) {
       console.error("Erro na verificação de disponibilidade:", err);
       setError(err instanceof Error ? err.message : 'Erro ao verificar disponibilidade do produto.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
