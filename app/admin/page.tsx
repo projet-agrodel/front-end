@@ -2,11 +2,11 @@
 
 import React from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line
 } from 'recharts';
 // Importar ícones reais
-import { DollarSign, ShoppingBag, Users, Archive } from 'lucide-react';
+import { DollarSign, ShoppingBag, Users, Archive } from 'lucide-react'; 
 
 // --- Simulação de busca de dados ---
 // Substitua esta função pela sua lógica real de busca de dados (API, banco de dados, etc.)
@@ -171,7 +171,6 @@ export default function AdminDashboardPage() {
             <MetricCard
                 title="Receita Total"
                 value={formatCurrency(data.totalRevenue)}
-                // Substituído IconPlaceholder por DollarSign
                 icon={<DollarSign size={24} className="text-green-600" />}
                 change="+12% vs mês passado" 
                 changeType='positive'
@@ -179,7 +178,6 @@ export default function AdminDashboardPage() {
             <MetricCard
                 title="Total de Vendas"
                 value={data.totalSalesCount.toLocaleString('pt-BR')}
-                 // Substituído IconPlaceholder por ShoppingBag
                 icon={<ShoppingBag size={24} className="text-blue-600" />}
                 change="+80 pedidos"
                 changeType='positive'
@@ -187,7 +185,6 @@ export default function AdminDashboardPage() {
             <MetricCard
                 title="Usuários Ativos"
                 value={data.activeUsers.toLocaleString('pt-BR')}
-                 // Substituído IconPlaceholder por Users
                 icon={<Users size={24} className="text-purple-600" />}
                 change="-5% vs mês passado"
                 changeType='negative'
@@ -195,13 +192,12 @@ export default function AdminDashboardPage() {
              <MetricCard
                 title="Produtos Cadastrados"
                 value={data.productCount.toLocaleString('pt-BR')}
-                 // Substituído IconPlaceholder por Archive
                 icon={<Archive size={24} className="text-orange-500" />}
             />
         </div>
 
         {/* Gráfico e Tabela */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mt-6">
           {/* Gráfico ocupando mais espaço */}
           <div className="lg:col-span-3">
              <RevenueChart data={data.monthlySales} />
