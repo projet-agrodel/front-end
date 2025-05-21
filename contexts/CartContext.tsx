@@ -38,6 +38,20 @@ interface CartProviderProps {
   children: ReactNode;
 }
 
+const handleAuthError = (error: unknown, status?: number) => {
+  if (
+    status === 401 || 
+    status === 403 || 
+    (error instanceof Error && (error.message.includes('401') || error.message.includes('403')))
+  ) {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('session_invalid', 'true');
+      const sessionInvalidEvent = new CustomEvent('session_invalid');
+      window.dispatchEvent(sessionInvalidEvent);
+    }
+  }
+};
+
 // Componente Provedor
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const { data: session, status } = useSession();
@@ -95,6 +109,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       });
       
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          handleAuthError(null, response.status);
+        }
         throw new Error(`Erro ao buscar carrinho: ${response.status}`);
       }
       
@@ -106,6 +123,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       
     } catch (err) {
       console.error("Erro ao buscar carrinho:", err);
+      handleAuthError(err);
       setError(err instanceof Error ? err.message : 'Erro desconhecido ao buscar carrinho.');
     } finally {
       setIsLoading(false);
