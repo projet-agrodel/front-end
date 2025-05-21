@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { PackagePlus, Package, Search, AlertTriangle, Edit3, Trash2, PlusCircle } from 'lucide-react';
+import { Package, Search, AlertTriangle, Edit3, Trash2, PlusCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { 
     getAdminProducts, 
@@ -10,28 +10,25 @@ import {
     deleteAdminProduct,
     AdminProduct,
     CreateAdminProductPayload,
-    UpdateAdminProductPayload
-} from '../../../services/adminProductService'; // Corrigido o path
+    UpdateAdminProductPayload,
+} from '../../../services/adminProductService';
+import { getAuthTokenForAdmin } from '../../../utils/authAdmin'; // Caminho corrigido
 
-// Simulação de como obter o token. Substituir pela lógica real de autenticação.
-const getAuthTokenForAdmin = (): string | null => {
-    if (typeof window !== 'undefined') {
-        // Exemplo: return localStorage.getItem('adminAuthToken');
-        // Por agora, retornando um token mockado. REMOVER EM PRODUÇÃO.
-        return 'mocked-admin-jwt-token'; 
-    }
-    return null;
-};
-
-// Interface Product local ajustada para corresponder melhor ao AdminProduct e aos campos da UI.
-// Alguns campos como 'status', 'isPromotion', 'originalPrice' podem precisar ser adicionados ao backend
-// ou tratados puramente no frontend se não forem persistidos.
-interface DisplayProduct extends AdminProduct {
-  categoryName: string;
-  status: 'Ativo' | 'Inativo';
-  imageUrl?: string; 
-  isPromotion?: boolean;
-  originalPrice?: number | null;
+// Interface para os dados exibidos na tabela e passados para o formulário como initialData
+interface DisplayProduct {
+    // Campos espelhados de AdminProduct que são usados na UI e no formulário
+    id: number; 
+    name: string;
+    description: string;
+    price: number;
+    stock: number;
+    imageUrl?: string | null; 
+    status: 'Ativo' | 'Inativo'; // Mantém os tipos literais usados na UI
+    isPromotion: boolean; 
+    originalPrice?: number | null;
+    category?: { id: number; name: string }; // AdminProduct tem category | null, aqui pode ser opcional
+    createdAt?: string | Date; // Pode ser string ou Date dependendo da transformação
+    updatedAt?: string | Date;
 }
 
 // Componente simples de Modal de Confirmação
@@ -64,7 +61,7 @@ function ConfirmationModal({
 
     return (
         <motion.div
-            className="fixed inset-0 z-50 flex justify-center items-center p-4 backdrop-blur-sm bg-black bg-opacity-50"
+            className="fixed inset-0 z-50 flex justify-center items-center p-4 backdrop-blur-sm bg-transparent bg-opacity-50"
             variants={overlayVariants} initial="hidden" animate="visible" exit="exit"
             onClick={onCancel} // Fecha ao clicar fora
         >
@@ -111,12 +108,23 @@ interface ProductFormProps {
 }
 
 function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories }: ProductFormProps) {
-    const [formData, setFormData] = useState<Partial<CreateAdminProductPayload>>({});
+    // Garantir que CreateAdminProductPayload inclua todos os campos necessários, incluindo os opcionais
+    const [formData, setFormData] = useState<Partial<CreateAdminProductPayload>>({
+        name: '',
+        description: '',
+        price: 0,
+        stock: 0,
+        category_id: undefined,
+        imageUrl: '',
+        status: 'Ativo',
+        isPromotion: false,
+        originalPrice: null,
+    });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (isOpen) { // Apenas atualiza o form data se o modal estiver aberto
+        if (isOpen) {
             if (initialData) {
                 setFormData({
                     name: initialData.name,
@@ -124,9 +132,24 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
                     price: initialData.price,
                     stock: initialData.stock,
                     category_id: initialData.category?.id,
+                    imageUrl: initialData.imageUrl || '',
+                    status: initialData.status || 'Ativo',
+                    isPromotion: !!initialData.isPromotion,
+                    originalPrice: initialData.originalPrice ?? null,
                 });
             } else {
-                setFormData({ name: '', description: '', price: 0, stock: 0, category_id: undefined });
+                // Reset para novo produto
+                setFormData({
+                    name: '',
+                    description: '',
+                    price: 0, // Ou use string vazia '' se preferir campos vazios em vez de 0
+                    stock: 0, // Ou ''
+                    category_id: undefined,
+                    imageUrl: '',
+                    status: 'Ativo',
+                    isPromotion: false,
+                    originalPrice: null, // Ou ''
+                });
             }
             setError(null); 
         }
@@ -135,19 +158,40 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
     if (!isOpen) return null;
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        const isNumberField = name === 'price' || name === 'stock' || name === 'category_id';
-        setFormData((prev: Partial<CreateAdminProductPayload>) => ({
-            ...prev,
-            [name]: isNumberField && value !== '' ? parseFloat(value) : value,
-        }));
+        const { name, value, type } = e.target;
+        let processedValue: string | number | boolean | null | undefined = value;
+
+        if (type === 'checkbox' && name === 'isPromotion') {
+            const { checked } = e.target as HTMLInputElement;
+            processedValue = checked;
+        } else if (name === 'price' || name === 'stock' || name === 'originalPrice') {
+            if (value === '') {
+                processedValue = (name === 'originalPrice') ? null : '';
+            } else {
+                const num = parseFloat(value);
+                processedValue = isNaN(num) ? value : num;
+            }
+        } else if (name === 'category_id') {
+            const categoryStringValue = value; 
+            if (categoryStringValue === '') {
+                processedValue = undefined;
+            } else {
+                const numCatId = parseInt(categoryStringValue, 10);
+                if (isNaN(numCatId)) {
+                    processedValue = undefined;
+                } else {
+                    processedValue = numCatId;
+                }
+            }
+        }
+        setFormData((prev) => ({ ...prev, [name]: processedValue }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         setError(null);
-        const token = getAuthTokenForAdmin();
+        const token = getAuthTokenForAdmin(); 
         if (!token) {
             setError("Autenticação necessária.");
             setIsSubmitting(false);
@@ -160,26 +204,65 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
             price: Number(formData.price) || 0,
             stock: Number(formData.stock) || 0,
             category_id: formData.category_id ? Number(formData.category_id) : null,
+            imageUrl: formData.imageUrl || undefined,
+            status: formData.status || 'Ativo',
+            isPromotion: formData.isPromotion || false,
+            originalPrice: (formData.originalPrice !== undefined && formData.originalPrice !== null && 
+                           (typeof formData.originalPrice === 'string' ? formData.originalPrice === '' : false))
+                           ? Number(formData.originalPrice) : null,
         };
-
-        if (!payload.name || !payload.description || payload.price <= 0 || payload.stock < 0) {
-            setError("Nome, descrição são obrigatórios. Preço deve ser > 0 e estoque >= 0.");
+        
+        if (!payload.name || !payload.description || payload.price <= 0 ) {
+            setError("Nome, descrição são obrigatórios. Preço deve ser > 0.");
+            setIsSubmitting(false);
+            return;
+        }
+        if (payload.stock < 0) {
+            setError("Estoque não pode ser negativo.");
             setIsSubmitting(false);
             return;
         }
 
         try {
-            let result;
+            let result: AdminProduct;
             if (initialData?.id) {
-                result = await updateAdminProduct(String(initialData.id), payload, token);
+                const currentInitialData = initialData as DisplayProduct;
+                const finalUpdatePayload: UpdateAdminProductPayload = {};
+
+                if (payload.name !== currentInitialData.name) finalUpdatePayload.name = payload.name;
+                if (payload.description !== currentInitialData.description) finalUpdatePayload.description = payload.description;
+                if (payload.price !== currentInitialData.price) finalUpdatePayload.price = payload.price;
+                if (payload.stock !== currentInitialData.stock) finalUpdatePayload.stock = payload.stock;
+                
+                const initialCategoryId = currentInitialData.category?.id ?? null;
+                if (payload.category_id !== initialCategoryId) finalUpdatePayload.category_id = payload.category_id;
+                
+                const currentImageUrl = currentInitialData.imageUrl ?? undefined;
+                if (payload.imageUrl !== currentImageUrl) finalUpdatePayload.imageUrl = payload.imageUrl;
+                
+                if (payload.status !== currentInitialData.status) finalUpdatePayload.status = payload.status;
+                if (payload.isPromotion !== currentInitialData.isPromotion) finalUpdatePayload.isPromotion = payload.isPromotion;
+                
+                const currentOriginalPrice = currentInitialData.originalPrice ?? null;
+                if (payload.originalPrice !== currentOriginalPrice) finalUpdatePayload.originalPrice = payload.originalPrice;
+
+                if (Object.keys(finalUpdatePayload).length > 0) {
+                    result = await updateAdminProduct(String(currentInitialData.id), finalUpdatePayload, token);
+                } else {
+                    onSubmitSuccess(currentInitialData as unknown as AdminProduct);
+                    onClose();
+                    setIsSubmitting(false);
+                    return; 
+                }
             } else { 
                 result = await createAdminProduct(payload, token);
             }
             onSubmitSuccess(result);
             onClose();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Erro ao salvar produto:", err);
-            setError(err.message || "Ocorreu um erro ao salvar o produto.");
+            const error = err as Error;
+            setError(error.message || "Ocorreu um erro ao salvar o produto.");
         } finally {
             setIsSubmitting(false);
         }
@@ -190,7 +273,7 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
 
     return (
         <motion.div 
-            className="fixed inset-0 z-40 flex justify-center items-start pt-10 p-4 backdrop-blur-sm bg-black bg-opacity-50 overflow-y-auto"
+            className="fixed inset-0 z-40 flex justify-center items-start pt-10 p-4 backdrop-blur-sm bg-transparent bg-opacity-75 overflow-y-auto"
             variants={overlayVariants} initial="hidden" animate="visible" exit="exit"
             onClick={onClose}
         >
@@ -199,43 +282,75 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
                 variants={modalVariants}
                 onClick={(e) => e.stopPropagation()}
             >
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                <form onSubmit={handleSubmit} className="p-6 space-y-6"> {/* Aumentado o space-y */}
+                    <h3 className="text-xl font-semibold text-gray-800 mb-6"> {/* Aumentado mb e tamanho da fonte */}
                         {initialData?.id ? "Editar Produto" : "Adicionar Novo Produto"}
                     </h3>
                     
-                    {error && <p className="text-red-500 text-sm py-2 px-3 bg-red-50 rounded-md">{error}</p>}
+                    {error && <p className="text-red-500 text-sm py-2 px-3 bg-red-100 border border-red-300 rounded-md">{error}</p>}
 
+                    {/* Campos existentes */}
                     <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nome</label>
-                        <input type="text" name="name" id="name" value={formData.name || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Nome do Produto</label>
+                        <input type="text" name="name" id="name" value={formData.name || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" />
                     </div>
                     <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-700">Descrição</label>
-                        <textarea name="description" id="description" value={formData.description || ''} onChange={handleChange} required rows={3} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+                        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                        <textarea name="description" id="description" value={formData.description || ''} onChange={handleChange} required rows={3} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"></textarea>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"> {/* Ajustado gap */}
                         <div>
-                            <label htmlFor="price" className="block text-sm font-medium text-gray-700">Preço (R$)</label>
-                            <input type="number" name="price" id="price" value={formData.price || ''} onChange={handleChange} required min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                            <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">Preço (R$)</label>
+                            <input type="text" name="price" id="price" value={formData.price === null || formData.price === undefined ? '' : String(formData.price)} onChange={handleChange} required placeholder="Ex: 25.99" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" />
                         </div>
                         <div>
-                            <label htmlFor="stock" className="block text-sm font-medium text-gray-700">Estoque</label>
-                            <input type="number" name="stock" id="stock" value={formData.stock || ''} onChange={handleChange} required min="0" step="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                            <label htmlFor="originalPrice" className="block text-sm font-medium text-gray-700 mb-1">Preço Original (R$) <span className="text-xs text-gray-500">(Opcional)</span></label>
+                            <input type="text" name="originalPrice" id="originalPrice" value={formData.originalPrice === null || formData.originalPrice === undefined ? '' : String(formData.originalPrice)} onChange={handleChange} placeholder="Ex: 30.00" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" />
+                        </div>
+                        <div>
+                            <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">Estoque</label>
+                            <input type="number" name="stock" id="stock" value={formData.stock === null || formData.stock === undefined ? '' : formData.stock} onChange={handleChange} required min="0" step="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" />
+                        </div>
+                        <div>
+                            <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                            <select 
+                                name="category_id" 
+                                id="category_id" 
+                                value={formData.category_id !== undefined ? String(formData.category_id) : ''} 
+                                onChange={handleChange} 
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                            >
+                                <option value="">Selecione uma categoria</option>
+                                {categories.map(cat => (
+                                    <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select name="status" id="status" value={formData.status || 'Ativo'} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                                <option value="Ativo">Ativo</option>
+                                <option value="Inativo">Inativo</option>
+                            </select>
+                        </div>
+                         <div> {/* Container para alinhar o checkbox com outros campos */}
+                            <label htmlFor="isPromotion" className="block text-sm font-medium text-gray-700 mb-1 invisible">Promoção</label> {/* Label invisível para alinhar */}
+                            <div className="flex items-center mt-1 pt-2"> {/* Ajuste de margem para alinhar com inputs */}
+                                <input id="isPromotion" name="isPromotion" type="checkbox" checked={formData.isPromotion || false} onChange={handleChange} className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500" />
+                                <label htmlFor="isPromotion" className="ml-2 block text-sm font-medium text-gray-700">Em Promoção?</label>
+                            </div>
                         </div>
                     </div>
+                    
                     <div>
-                        <label htmlFor="category_id" className="block text-sm font-medium text-gray-700">Categoria</label>
-                        <select name="category_id" id="category_id" value={formData.category_id || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            <option value="">Selecione uma categoria</option>
-                            {categories.map(cat => (
-                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                            ))}
-                        </select>
+                        <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 mb-1">URL da Imagem <span className="text-xs text-gray-500">(Opcional)</span></label>
+                        <input type="text" name="imageUrl" id="imageUrl" value={formData.imageUrl || ''} onChange={handleChange} placeholder="https://exemplo.com/imagem.jpg" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" />
                     </div>
-                    <div className="flex justify-end gap-3 pt-4">
-                        <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Cancelar</button>
-                        <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50">
+
+                    <div className="flex justify-end gap-4 pt-6"> {/* Aumentado pt e gap */}
+                        <button type="button" onClick={onClose} className="px-6 py-2.5 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium text-sm transition-colors">Cancelar</button>
+                        <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 font-medium text-sm transition-colors">
                             {isSubmitting ? "Salvando..." : (initialData?.id ? "Salvar Alterações" : "Adicionar Produto")}
                         </button>
                     </div>
@@ -243,6 +358,11 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
             </motion.div>
         </motion.div>
     );
+}
+
+// Definir interface para erros da API
+interface ApiError {
+    message?: string;
 }
 
 export default function AdminProductsPage() {
@@ -259,7 +379,7 @@ export default function AdminProductsPage() {
 
   // Simulação: buscar categorias do backend ou ter uma lista estática
   // No futuro, isso viria de uma chamada API: getCategories()
-  const [availableCategories, setAvailableCategories] = useState<{id: number; name: string}[]>([
+  const [availableCategories] = useState<{id: number; name: string}[]>([
     {id: 1, name: "Fertilizantes"}, {id: 2, name: "Sementes"}, {id: 3, name: "Defensivos"}, {id: 4, name: "Adubos"}, {id: 5, name: "Vasos"}
   ]);
 
@@ -276,14 +396,24 @@ export default function AdminProductsPage() {
     try {
         const productsFromApi = await getAdminProducts(token);
         const displayProducts: DisplayProduct[] = productsFromApi.map(p => ({
-            ...p,
-            categoryName: p.category?.name || 'Sem categoria',
-            status: p.stock > 0 ? 'Ativo' : 'Inativo', 
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            stock: p.stock,
+            imageUrl: p.imageUrl ?? undefined,
+            status: p.status as ('Ativo' | 'Inativo') ?? 'Inativo',
+            isPromotion: !!p.isPromotion,
+            originalPrice: p.originalPrice ?? undefined,
+            category: p.category || undefined,
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
         }));
         setAllProducts(displayProducts);
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("Erro ao buscar produtos:", err);
-        setError(err.message || "Falha ao carregar produtos.");
+        const error = err as ApiError;
+        setError(error.message || "Falha ao carregar produtos.");
         setAllProducts([]); // Limpa produtos em caso de erro
     } finally {
         setLoading(false);
@@ -338,15 +468,16 @@ export default function AdminProductsPage() {
         console.log("Produto excluído com sucesso ID:", productToDelete.id);
         cancelDelete(); 
         fetchProducts(); // Re-fetch
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("Erro ao excluir produto:", err);
-        setError(err.message || "Falha ao excluir o produto.");
+        const error = err as ApiError;
+        setError(error.message || "Falha ao excluir o produto.");
         setIsDeleting(false); 
     }
   };
 
   const uniqueCategoriesForFilter = useMemo(() => {
-    const categories = new Set(allProducts.map(p => p.categoryName));
+    const categories = new Set(allProducts.map(p => p.category?.name));
     return ['', ...Array.from(categories).sort()]; // Adiciona "Todas as Categorias"
   }, [allProducts]);
 
@@ -354,7 +485,7 @@ export default function AdminProductsPage() {
     let productsToFilter = allProducts;
 
     if (selectedCategoryFilter) {
-        productsToFilter = productsToFilter.filter(product => product.categoryName === selectedCategoryFilter);
+        productsToFilter = productsToFilter.filter(product => product.category?.name === selectedCategoryFilter);
     }
 
     if (searchTerm) {
@@ -376,11 +507,11 @@ export default function AdminProductsPage() {
       {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-semibold text-gray-800 flex items-center">
-          <Package size={28} className="mr-3 text-indigo-600" /> Gerenciamento de Produtos
+          <Package size={28} className="mr-3 text-green-600" /> Gerenciamento de Produtos
         </h1>
         <button
           onClick={() => { setEditingProduct(null); setIsFormModalOpen(true); }}
-          className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-150"
+          className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-150"
         >
           <PlusCircle size={18} className="mr-2" />
           Adicionar Produto
@@ -399,7 +530,7 @@ export default function AdminProductsPage() {
                     type="text"
                     id="search"
                     name="search"
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-green-500 focus:border-green-500 sm:text-sm"
                     placeholder="Buscar por nome ou descrição..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -411,7 +542,7 @@ export default function AdminProductsPage() {
             <select
                 id="categoryFilter"
                 name="categoryFilter"
-                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
                 value={selectedCategoryFilter}
                 onChange={(e) => setSelectedCategoryFilter(e.target.value)}
             >
@@ -449,7 +580,7 @@ export default function AdminProductsPage() {
           <p className="text-sm text-gray-500 mt-1">
             {searchTerm || selectedCategoryFilter ? "Tente ajustar seus filtros ou " : "Comece adicionando um novo produto."}
             {!searchTerm && !selectedCategoryFilter && 
-                <button onClick={() => { setEditingProduct(null); setIsFormModalOpen(true); }} className="text-indigo-600 hover:text-indigo-500 font-medium">
+                <button onClick={() => { setEditingProduct(null); setIsFormModalOpen(true); }} className="text-green-600 hover:text-green-500 font-medium">
                     adicionar um produto
                 </button>
             }
@@ -475,7 +606,7 @@ export default function AdminProductsPage() {
                     <div className="text-sm font-medium text-gray-900">{product.name}</div>
                     <div className="text-xs text-gray-500 truncate max-w-xs">{product.description}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.categoryName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category?.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(product.price)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.stock}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -529,4 +660,4 @@ export default function AdminProductsPage() {
       </AnimatePresence>
     </div>
   );
-} 
+}

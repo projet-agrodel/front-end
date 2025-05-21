@@ -4,11 +4,11 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Tag, Settings, LogOut, Bell, UserCircle
-} from 'lucide-react'; // Importar ícones reais
+} from 'lucide-react'; // Importar ícones reais. BarChart2 removido.
+import AdvancedAnalyticsButton from './_components/AdvancedAnalyticsButton'; // Importar o botão
 
 // Hook para obter o pathname (necessário para link ativo)
 import { usePathname } from 'next/navigation';
-import { div } from 'framer-motion/client';
 
 // Componente Sidebar Expansível
 function Sidebar() {
@@ -85,6 +85,7 @@ function Header() {
         <h1 className="text-lg font-semibold text-gray-900">Visão Geral</h1>
       </div>
       <div className="flex items-center space-x-5">
+        <AdvancedAnalyticsButton />
         <button className="text-gray-500 hover:text-gray-700 relative">
           <Bell size={22} />
           {/* Badge de notificação (opcional) */}
