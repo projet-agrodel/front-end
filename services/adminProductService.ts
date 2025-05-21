@@ -38,19 +38,15 @@ export interface GetAdminProductsParams {
 
 export async function getAdminProducts(token: string, params: GetAdminProductsParams = {}): Promise<AdminProduct[]> {
   try {
-    // Construir a URL com os parâmetros - usando /admin/products/list em vez de /admin/products
-    const url = new URL(`${API_URL}/admin/products/list`);
-    
-    // Adicionar parâmetros à URL se existirem
+    // Construir a URL com os parâmetros
+    const url = new URL(`${API_URL}/admin/products`);
+
     if (params.query) url.searchParams.append('query', params.query);
     if (params.min_price !== undefined) url.searchParams.append('min_price', params.min_price.toString());
     if (params.max_price !== undefined) url.searchParams.append('max_price', params.max_price.toString());
-    
-    // Se status for undefined ou null, não adicione o parâmetro
-    // Isso permitirá que o backend retorne TODOS os produtos
+
     if (params.status) url.searchParams.append('status_filter', params.status);
-    
-    // Debug para verificar a URL final
+
     console.log('Fetching products with URL:', url.toString());
     
     const response = await fetch(url.toString(), {

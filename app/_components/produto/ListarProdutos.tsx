@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { SlidersHorizontal } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -62,11 +62,33 @@ const sortProducts = (produtos: Produto[], sortOrder: string | null): Produto[] 
   return sorted;
 };
 
-// Função para buscar produtos
-const fetchProducts = async (): Promise<Produto[]> => {
-  const response = await fetch(`${API_URL}/admin/products`);
+const fetchProducts = async (filters: FilterFormData): Promise<Produto[]> => {
+  const params = new URLSearchParams();
+  if (filters.searchTerm) {
+    params.append('q', filters.searchTerm);
+  }
+  if (filters.categoryId !== null) {
+    params.append('category_id', filters.categoryId.toString());
+  }
+  if (filters.minPrice > 0) {
+    params.append('minPrice', filters.minPrice.toString());
+  }
+  if (filters.maxPrice < 500 && filters.maxPrice > 0) { 
+    params.append('maxPrice', filters.maxPrice.toString());
+  }
+  if (filters.sortOrder) {
+    params.append('sort', filters.sortOrder);
+  }
+
+  const queryString = params.toString();
+  const url = `${API_URL}/api/products${queryString ? `?${queryString}` : ''}`;
+  console.log("Buscando produtos com URL:", url); // Log para depuração
+
+  const response = await fetch(url);
   if (!response.ok) {
-    throw new Error('Erro ao buscar produtos');
+    const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido ao buscar produtos' }));
+    console.error("Erro na API:", response.status, errorData);
+    throw new Error(errorData.message || 'Erro ao buscar produtos');
   }
   const data = await response.json();
   return data.map((p: Produto) => ({
@@ -94,17 +116,6 @@ const ListarProdutos = () => {
   const [animationTrigger, setAnimationTrigger] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
 
-  // React Query para buscar dados
-  const { data: produtos, isLoading: isLoadingProdutos, error: produtosError } = useQuery({
-    queryKey: ['produtos'],
-    queryFn: fetchProducts
-  });
-
-  const { data: categorias, isLoading: isLoadingCategorias } = useQuery({
-    queryKey: ['categorias'],
-    queryFn: fetchCategories
-  });
-
   // React Hook Form
   const { register, handleSubmit, watch, setValue, reset } = useForm<FilterFormData>({
     resolver: zodResolver(filterSchema),
@@ -119,15 +130,36 @@ const ListarProdutos = () => {
 
   // Observar mudanças nos filtros
   const filters = watch();
+  const prevFiltersRef = useRef<FilterFormData>(); // Ref para guardar filtros anteriores
 
-  // Efeito para sincronizar URL com o formulário
+  // React Query para buscar dados
+  const { data: produtos, isLoading: isLoadingProdutos, error: produtosError } = useQuery<Produto[], Error>({
+    queryKey: ['produtos', filters], // Inclui filters na queryKey
+    queryFn: () => fetchProducts(filters), // Passa filters para fetchProducts
+    enabled: !!filters, // A query só executa se filters estiver definido
+  });
+
+  const { data: categorias, isLoading: isLoadingCategorias } = useQuery<Categoria[], Error>({
+    queryKey: ['categorias'],
+    queryFn: fetchCategories
+  });
+
+  // Efeito para atualizar URL quando os filtros do formulário mudam E o botão de busca é clicado
+  useEffect(() => {
+    const queryParams = new URLSearchParams();
+    if (filters.searchTerm) queryParams.set('q', filters.searchTerm);
+    if (filters.categoryId) queryParams.set('category', filters.categoryId.toString());
+    if (filters.minPrice > 0) queryParams.set('minPrice', filters.minPrice.toString());
+    if (filters.maxPrice < 500 && filters.maxPrice > 0) queryParams.set('maxPrice', filters.maxPrice.toString());
+    if (filters.sortOrder) queryParams.set('sort', filters.sortOrder);
+  }, [filters, pathname, router, isSearching]);
+
   useEffect(() => {
     const categoryId = searchParams.get('category');
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
     const sortOrder = searchParams.get('sort');
     const searchTerm = searchParams.get('q');
-
     reset({
       categoryId: categoryId ? parseInt(categoryId, 10) : null,
       minPrice: minPrice ? parseInt(minPrice, 10) : 0,
@@ -136,6 +168,16 @@ const ListarProdutos = () => {
       searchTerm: searchTerm || '',
     });
   }, [searchParams, reset]);
+
+  useEffect(() => {
+    if (prevFiltersRef.current && JSON.stringify(prevFiltersRef.current) !== JSON.stringify(filters)) {
+      if(!isLoadingProdutos && produtos) { 
+        setAnimationTrigger(prev => prev + 1);
+        setIsSearching(true); 
+      }
+    }
+    prevFiltersRef.current = filters;
+  }, [filters, produtos, isLoadingProdutos]);
 
   // Aplicar filtros aos produtos
   const produtosFiltrados = produtos ? (() => {
