@@ -11,10 +11,10 @@ import {
     AdminProduct,
     CreateAdminProductPayload,
     UpdateAdminProductPayload,
+    GetAdminProductsParams,
 } from '../../../services/adminProductService';
 import { getAuthTokenForAdmin } from '../../../utils/authAdmin'; // Caminho corrigido
 
-// Interface para os dados exibidos na tabela e passados para o formulário como initialData
 interface DisplayProduct {
     // Campos espelhados de AdminProduct que são usados na UI e no formulário
     id: number; 
@@ -26,8 +26,8 @@ interface DisplayProduct {
     status: 'Ativo' | 'Inativo'; // Mantém os tipos literais usados na UI
     isPromotion: boolean; 
     originalPrice?: number | null;
-    category?: { id: number; name: string }; // AdminProduct tem category | null, aqui pode ser opcional
-    createdAt?: string | Date; // Pode ser string ou Date dependendo da transformação
+    category?: { id: number; name: string }; 
+    createdAt?: string | Date; 
     updatedAt?: string | Date;
 }
 
@@ -40,7 +40,7 @@ interface ConfirmationModalProps {
     onCancel: () => void;
     confirmText?: string;
     cancelText?: string;
-    isConfirming?: boolean; // Para estado de carregamento
+    isConfirming?: boolean; 
 }
 
 function ConfirmationModal({
@@ -191,7 +191,7 @@ function ProductForm({ isOpen, onClose, onSubmitSuccess, initialData, categories
         e.preventDefault();
         setIsSubmitting(true);
         setError(null);
-        const token = getAuthTokenForAdmin(); 
+        const token = await getAuthTokenForAdmin(); 
         if (!token) {
             setError("Autenticação necessária.");
             setIsSubmitting(false);
@@ -372,13 +372,12 @@ export default function AdminProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState(''); 
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>(''); 
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('Todos');
   const [editingProduct, setEditingProduct] = useState<DisplayProduct | null>(null); 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); 
   const [productToDelete, setProductToDelete] = useState<DisplayProduct | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Simulação: buscar categorias do backend ou ter uma lista estática
-  // No futuro, isso viria de uma chamada API: getCategories()
   const [availableCategories] = useState<{id: number; name: string}[]>([
     {id: 1, name: "Fertilizantes"}, {id: 2, name: "Sementes"}, {id: 3, name: "Defensivos"}, {id: 4, name: "Adubos"}, {id: 5, name: "Vasos"}
   ]);
@@ -386,39 +385,49 @@ export default function AdminProductsPage() {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const token = getAuthTokenForAdmin();
-    if (!token) {
+    try {
+      const token = await getAuthTokenForAdmin();
+      if (!token) {
         setError("Autenticação necessária para carregar produtos.");
         setLoading(false);
         setAllProducts([]); // Limpa produtos se não houver token
         return;
-    }
-    try {
-        const productsFromApi = await getAdminProducts(token);
-        const displayProducts: DisplayProduct[] = productsFromApi.map(p => ({
-            id: p.id,
-            name: p.name,
-            description: p.description,
-            price: p.price,
-            stock: p.stock,
-            imageUrl: p.imageUrl ?? undefined,
-            status: p.status as ('Ativo' | 'Inativo') ?? 'Inativo',
-            isPromotion: !!p.isPromotion,
-            originalPrice: p.originalPrice ?? undefined,
-            category: p.category || undefined,
-            createdAt: p.createdAt,
-            updatedAt: p.updatedAt,
-        }));
-        setAllProducts(displayProducts);
+      }
+
+      const params: GetAdminProductsParams = {};
+      if (selectedStatusFilter && selectedStatusFilter !== 'Todos') {
+        params.status = selectedStatusFilter as 'Ativo' | 'Inativo';
+      }
+      
+      console.log("Buscando produtos com filtro de status:", selectedStatusFilter || "Todos");
+      
+      const productsFromApi = await getAdminProducts(token, params);
+      console.log("Produtos recebidos da API:", productsFromApi.length, "produtos");
+      
+      const displayProducts: DisplayProduct[] = productsFromApi.map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        stock: p.stock,
+        imageUrl: p.imageUrl ?? undefined,
+        status: p.status as ('Ativo' | 'Inativo') ?? 'Inativo',
+        isPromotion: !!p.isPromotion,
+        originalPrice: p.originalPrice ?? undefined,
+        category: p.category || undefined,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      }));
+      setAllProducts(displayProducts);
     } catch (err: unknown) {
-        console.error("Erro ao buscar produtos:", err);
-        const error = err as ApiError;
-        setError(error.message || "Falha ao carregar produtos.");
-        setAllProducts([]); // Limpa produtos em caso de erro
+      console.error("Erro ao buscar produtos:", err);
+      const error = err as ApiError;
+      setError(error.message || "Falha ao carregar produtos.");
+      setAllProducts([]); // Limpa produtos em caso de erro
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-  }, []);
+  }, [selectedStatusFilter]); // Adicionar selectedStatusFilter como dependência
 
   useEffect(() => {
     fetchProducts();
@@ -456,23 +465,24 @@ export default function AdminProductsPage() {
 
     setIsDeleting(true);
     setError(null); // Limpa erros anteriores
-    const token = getAuthTokenForAdmin();
-    if (!token) {
-        setError("Autenticação necessária para excluir produto.");
-        setIsDeleting(false);
-        return;
-    }
-
+    
     try {
-        await deleteAdminProduct(String(productToDelete.id), token); // ID precisa ser string
-        console.log("Produto excluído com sucesso ID:", productToDelete.id);
-        cancelDelete(); 
-        fetchProducts(); // Re-fetch
+      const token = await getAuthTokenForAdmin();
+      if (!token) {
+          setError("Autenticação necessária para excluir produto.");
+          setIsDeleting(false);
+          return;
+      }
+
+      await deleteAdminProduct(String(productToDelete.id), token); // ID precisa ser string
+      console.log("Produto excluído com sucesso ID:", productToDelete.id);
+      cancelDelete(); 
+      fetchProducts(); // Re-fetch
     } catch (err: unknown) {
-        console.error("Erro ao excluir produto:", err);
-        const error = err as ApiError;
-        setError(error.message || "Falha ao excluir o produto.");
-        setIsDeleting(false); 
+      console.error("Erro ao excluir produto:", err);
+      const error = err as ApiError;
+      setError(error.message || "Falha ao excluir o produto.");
+      setIsDeleting(false); 
     }
   };
 
@@ -519,8 +529,8 @@ export default function AdminProductsPage() {
       </div>
 
       {/* Filtros e Busca */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white rounded-lg shadow">
-        <div className="md:col-span-1">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-white rounded-lg shadow">
+        <div className="md:col-span-2">
             <label htmlFor="search" className="sr-only">Buscar Produtos</label>
             <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -551,7 +561,20 @@ export default function AdminProductsPage() {
                 ))}
             </select>
         </div>
-         {/* Poderia adicionar mais filtros aqui, como por status, promoção, etc. */}
+        <div className="md:col-span-1">
+            <label htmlFor="statusFilter" className="sr-only">Filtrar por Status</label>
+            <select
+                id="statusFilter"
+                name="statusFilter"
+                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
+                value={selectedStatusFilter}
+                onChange={(e) => setSelectedStatusFilter(e.target.value)}
+            >
+                <option value="Todos">Todos os Status</option>
+                <option value="Ativo">Ativos</option>
+                <option value="Inativo">Inativos</option>
+            </select>
+        </div>
       </div>
       
       {/* Exibição de Erro Principal */}

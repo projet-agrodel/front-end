@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { LogOut, User, Settings, Shield } from 'lucide-react';
 import CartIcon from './CartIcon';
+import { useEffect, useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,15 +18,73 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 const Navbar = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const [sessionStatus, setSessionStatus] = useState<'valid' | 'invalid'>('valid');
+
+  useEffect(() => {
+    // Verificar se a sessão é válida quando o componente monta
+    const checkSession = async () => {
+      if (session?.accessToken) {
+        try {
+          const response = await fetch(`${API_URL}/api/user/profile`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.accessToken}`,
+            },
+          });
+          
+          if (response.status === 401 || response.status === 403) {
+            // Sessão inválida, atualizar o estado
+            setSessionStatus('invalid');
+          } else {
+            setSessionStatus('valid');
+          }
+        } catch (error) {
+          console.error('Erro ao verificar sessão:', error);
+          setSessionStatus('invalid');
+        }
+      }
+    };
+
+    if (status === 'authenticated') {
+      checkSession();
+    } else if (status === 'unauthenticated') {
+      setSessionStatus('valid'); // Resetar o status quando deslogado
+    }
+    
+    // Verificar se há uma flag de sessão inválida no sessionStorage
+    const sessionInvalid = window.sessionStorage.getItem('session_invalid');
+    if (sessionInvalid === 'true') {
+      setSessionStatus('invalid');
+      window.sessionStorage.removeItem('session_invalid');
+    }
+
+    // Adicionar listener para o evento de sessão inválida
+    const handleSessionInvalid = () => {
+      setSessionStatus('invalid');
+    };
+    
+    window.addEventListener('session_invalid', handleSessionInvalid);
+    
+    return () => {
+      window.removeEventListener('session_invalid', handleSessionInvalid);
+    };
+  }, [session, status]);
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
+    setSessionStatus('valid');
     router.push('/auth/login');
   };
+
+  // Mostrar interface de usuário não autenticado se a sessão for inválida
+  const showAuthenticatedUI = status === 'authenticated' && sessionStatus === 'valid';
 
   return (
     <nav className="bg-white shadow-md z-100">
@@ -69,7 +128,7 @@ const Navbar = () => {
                 Produtos
               </Link>
 
-              {session?.user?.role === 'admin' && (
+              {showAuthenticatedUI && session?.user?.role === 'admin' && (
                 <Link 
                   href='/admin'
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
@@ -87,7 +146,7 @@ const Navbar = () => {
           <div className="flex items-center space-x-4">
             <CartIcon />
 
-            {session ? (
+            {showAuthenticatedUI ? (
               <DropdownMenu >
                 <DropdownMenuTrigger className='z-[9999]' asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">

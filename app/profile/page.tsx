@@ -27,7 +27,12 @@ const fetchUserData = async (token: string | null | undefined): Promise<User | n
       },
     });
     if (response.status === 401 || response.status === 404) {
-      return null; 
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem('session_invalid', 'true');
+        const sessionInvalidEvent = new CustomEvent('session_invalid');
+        window.dispatchEvent(sessionInvalidEvent);
+      }
+      return null;
     }
     if (!response.ok) {
       throw new Error('Falha ao buscar dados do usuário');

@@ -8,10 +8,9 @@ export interface AdminProduct {
   price: number;
   stock: number;
   category: { id: number; name: string } | null;
-  // Novos campos adicionados formalmente
   imageUrl?: string; 
-  status: 'Ativo' | 'Inativo'; // Backend agora define status, então não é mais opcional aqui se sempre vier
-  isPromotion: boolean; // Backend agora define isPromotion, então não é mais opcional
+  status: 'Ativo' | 'Inativo'; 
+  isPromotion: boolean; 
   originalPrice?: number | null;
   createdAt?: string;
   updatedAt?: string;
@@ -27,59 +26,61 @@ const getHeaders = (token: string) => {
   };
 };
 
-// Tipo para os parâmetros de getAdminProducts
 export interface GetAdminProductsParams {
-  q?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  sort?: string;
-  status?: 'Ativo' | 'Inativo' | ''; // String vazia para "todos" ou não filtrar por status explicitamente do lado do admin
+  query?: string;
+  min_price?: number;
+  max_price?: number;
+  status?: 'Ativo' | 'Inativo' | null;
   // Adicionar outros possíveis parâmetros de paginação/filtro aqui no futuro
   // page?: number;
   // limit?: number;
 }
 
-export const getAdminProducts = async (token: string, params?: GetAdminProductsParams): Promise<AdminProduct[]> => {
-  const queryParams = new URLSearchParams();
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-        // Garantir que o valor não é undefined, null e, se string, não é vazia após trim
-        if (value !== undefined && value !== null && (typeof value !== 'string' || String(value).trim() !== '')) {
-            queryParams.append(key, String(value));
-        }
+export async function getAdminProducts(token: string, params: GetAdminProductsParams = {}): Promise<AdminProduct[]> {
+  try {
+    // Construir a URL com os parâmetros - usando /admin/products/list em vez de /admin/products
+    const url = new URL(`${API_URL}/admin/products/list`);
+    
+    // Adicionar parâmetros à URL se existirem
+    if (params.query) url.searchParams.append('query', params.query);
+    if (params.min_price !== undefined) url.searchParams.append('min_price', params.min_price.toString());
+    if (params.max_price !== undefined) url.searchParams.append('max_price', params.max_price.toString());
+    
+    // Se status for undefined ou null, não adicione o parâmetro
+    // Isso permitirá que o backend retorne TODOS os produtos
+    if (params.status) url.searchParams.append('status_filter', params.status);
+    
+    // Debug para verificar a URL final
+    console.log('Fetching products with URL:', url.toString());
+    
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: getHeaders(token),
     });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(errorData.message || 'Falha ao buscar produtos administrativamente');
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Erro ao buscar produtos:', error);
+    throw error;
   }
-  const requestUrl = `${API_URL}/admin/products${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-  const response = await fetch(requestUrl, {
+}
+
+export const getAdminProductById = async (id: string, token: string): Promise<AdminProduct> => {
+
+  const response = await fetch(`${API_URL}/products/${id}`, {
     method: 'GET',
     headers: getHeaders(token),
-  });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: response.statusText }));
-    throw new Error(errorData.message || 'Falha ao buscar produtos administrativamente');
-  }
-  return response.json();
-};
-
-// Esta função pode ser desnecessária se a lista /admin/products já traz todos os detalhes
-// ou se o admin não precisar de uma visão detalhada de produto inativo fora da lista.
-// Se mantida, precisaria de uma rota backend GET /admin/products/:id
-export const getAdminProductById = async (id: string, token: string): Promise<AdminProduct> => {
-  // Temporariamente apontando para a rota pública, que só retornará ativos.
-  // Idealmente, esta seria uma rota admin específica se necessário.
-  const response = await fetch(`${API_URL}/products/${id}`, { // ATENÇÃO: Rota pública, não /admin/products/:id
-    method: 'GET',
-    headers: getHeaders(token), // Admin pode ver um produto ativo com seu token
   });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: response.statusText }));
     throw new Error(errorData.message || 'Falha ao buscar o produto');
   }
   const product = await response.json();
-  // Adicionalmente, o admin pode querer ver, mas a rota pública só dá ativos
   if (product.status !== 'Ativo') {
-      // Isso não deveria acontecer se a rota pública só retorna ativos.
-      // Mas se por algum motivo um produto inativo vazar por esta rota para um admin logado:
+
       console.warn("Admin acessou produto inativo pela rota pública de produto.");
   }
   return product;
@@ -91,15 +92,14 @@ export type CreateAdminProductPayload = Omit<AdminProduct, 'id' | 'category' | '
     description: string;
     price: number;
     stock: number;
-    // Adicionando os novos campos
     imageUrl?: string;
-    status: 'Ativo' | 'Inativo'; // Status é obrigatório na criação via admin
-    isPromotion: boolean;     // isPromotion é obrigatório na criação via admin
+    status: 'Ativo' | 'Inativo'; 
+    isPromotion: boolean;     
     originalPrice?: number | null;
 };
 
 export const createAdminProduct = async (productData: CreateAdminProductPayload, token: string): Promise<AdminProduct> => {
-  const response = await fetch(`${API_URL}/products`, { // CORRIGIDO: Endpoint para POST /products
+  const response = await fetch(`${API_URL}/admin/products`, { 
     method: 'POST',
     headers: getHeaders(token),
     body: JSON.stringify(productData),
@@ -111,11 +111,10 @@ export const createAdminProduct = async (productData: CreateAdminProductPayload,
   return response.json();
 };
 
-// Update pode ter todos os campos como opcionais
 export type UpdateAdminProductPayload = Partial<CreateAdminProductPayload>;
 
 export const updateAdminProduct = async (id: string, productData: UpdateAdminProductPayload, token: string): Promise<AdminProduct> => {
-  const response = await fetch(`${API_URL}/products/${id}`, { // CORRIGIDO: Endpoint para PUT /products/:id
+  const response = await fetch(`${API_URL}/admin/products/${id}`, { 
     method: 'PUT',
     headers: getHeaders(token),
     body: JSON.stringify(productData),
@@ -128,7 +127,7 @@ export const updateAdminProduct = async (id: string, productData: UpdateAdminPro
 };
 
 export const deleteAdminProduct = async (id: string, token: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/products/${id}`, { // CORRIGIDO: Endpoint para DELETE /products/:id
+  const response = await fetch(`${API_URL}/admin/products/${id}`, { // Adicionando o prefixo /admin
     method: 'DELETE',
     headers: getHeaders(token),
   });
@@ -139,17 +138,17 @@ export const deleteAdminProduct = async (id: string, token: string): Promise<voi
 };
 
 export const updateAdminProductStock = async (id: string, quantity: number, token: string): Promise<AdminProduct> => {
-    const response = await fetch(`${API_URL}/products/${id}/stock`, { // CORRIGIDO: Endpoint para PATCH /products/:id/stock
-      method: 'PATCH',
-      headers: getHeaders(token),
-      body: JSON.stringify({ quantity }), // O backend espera { "quantity": valor }
-    });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(errorData.message || 'Falha ao atualizar estoque do produto');
-    }
-    return response.json();
-  };
+  const response = await fetch(`${API_URL}/admin/products/${id}/stock`, { 
+    method: 'PATCH',
+    headers: getHeaders(token),
+    body: JSON.stringify({ quantity }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(errorData.message || 'Falha ao atualizar estoque do produto');
+  }
+  return response.json();
+};
 
 // Nota: A função getAuthToken() é uma suposição.
 // Você precisará implementar ou ajustar a forma como o token JWT é obtido e gerenciado no seu app.
