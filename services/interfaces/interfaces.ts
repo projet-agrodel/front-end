@@ -1,4 +1,4 @@
-import { TicketPriority, TicketStatus, TypeUser } from "../types/types";
+import { TicketPriority, TicketStatus } from "../types/types";
 
 // Tipo base para timestamps
 interface Timestamps {
@@ -6,39 +6,36 @@ interface Timestamps {
   updated_at: string;
 }
 
+// Esta será a interface User canônica baseada no user.to_dict() do backend
 export interface User extends Timestamps {
-  id: number;
+  id: number; // ID do banco de dados
   name: string;
   email: string;
-  password: string;
-  phone: string;
-  type: TypeUser;
+  phone?: string | null; // Tornar opcional/nulável se puder ser nulo no DB/resposta
+  type: 'admin' | 'user'; // Consistente com UserType do backend
 
-  // Relacionamentos
+  // Relacionamentos (opcionais, pois não vêm por padrão de user.to_dict())
+  // Suas interfaces (Cartao, Carrinho, etc.) precisam ser consistentes.
   cartoes?: Cartao[];
   carrinho?: Carrinho;
   pedidos?: Pedido[];
   tickets?: Ticket[];
-  ticket_messages?: TicketMessage[];
 }
 
 export interface Cartao extends Timestamps {
   id: number;
   user_id: number;
-  card_number: Buffer;
+  card_number_last4?: string; // Exemplo: se a API retornar apenas os últimos 4 dígitos
   card_holder_name: string;
-  card_expiration_date: Date;
-  card_cvv: Buffer;
+  card_expiration_date_str?: string; // Ex: "MM/YY"
+  card_brand?: string; // Ex: Visa, Mastercard
 
-  // Relacionamento
   user?: User;
 }
 
 export interface Carrinho extends Timestamps {
   id: number;
   user_id: number;
-
-  // Relacionamentos
   user?: User;
   itens?: CarrinhoItem[];
 }
@@ -64,11 +61,9 @@ export interface Categoria extends Timestamps {
 
 export interface Pedido extends Timestamps {
   id: number;
-  description: Buffer;
+  description?: string | null;
   amount: number;
   user_id: number;
-
-  // Relacionamentos
   user?: User;
   pagamento?: Pagamento;
   itens?: PedidoItem[];
@@ -80,9 +75,7 @@ export interface Pagamento extends Timestamps {
   payment_method: 'Cartão' | 'PIX';
   status: 'Aprovado' | 'Pendente' | 'Rejeitado';
   amount: number;
-  transaction_id: Buffer;
-
-  // Relacionamento
+  transaction_id?: string | null;
   pedido?: Pedido;
 }
 
@@ -90,8 +83,6 @@ export interface CarrinhoItem {
   carrinho_id: number;
   produto_id: number;
   quantity: number;
-
-  // Relacionamentos
   carrinho?: Carrinho;
   produto?: Produto;
 }
@@ -101,8 +92,6 @@ export interface PedidoItem {
   pedido_id: number;
   produto_id: number;
   quantity: number;
-
-  // Relacionamentos
   pedido?: Pedido;
   produto?: Produto;
 }
@@ -114,8 +103,6 @@ export interface Ticket extends Timestamps {
   description?: string;
   status: TicketStatus
   priority: TicketPriority
-
-  // Relacionamentos
   user?: User;
   messages?: TicketMessage[];
 }
@@ -126,8 +113,18 @@ export interface TicketMessage {
   user_id: number | null;
   message: string;
   created_at: string;
-
-  // Relacionamentos
-  ticket?: Ticket;
   user?: User;
+  ticket?: Ticket;
+}
+
+export interface ApiComentario extends Timestamps { // Definindo ApiComentario
+  id: number;
+  user_id: number;
+  product_id: number;
+  comment: string;
+  rating?: number; // Rating pode ser opcional
+  // Se o backend puder fornecer product_name, seria ótimo adicioná-lo aqui
+  // product_name?: string;
+  user?: User; // Relacionamento opcional com o usuário
+  produto?: Produto; // Relacionamento opcional com o produto
 }

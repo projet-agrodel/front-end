@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Tab } from '../_components/profile/types';
+import { User, Cartao as ApiCartao, ApiComentario } from '@/services/interfaces/interfaces';
+import { Tab, Card as LocalCard, Comment as LocalComment } from '../_components/profile/types';
 import { ProfileHeader } from '../_components/profile/ProfileHeader';
 import { TabNavigation } from '../_components/profile/TabNavigation';
 import { PersonalInfo } from '../_components/profile/tabs/PersonalInfo';
@@ -15,11 +16,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const fetchUserData = async (token: string | null | undefined): Promise<User | null> => {
   if (!token) {
-    console.log("fetchUserData: Nenhum token fornecido.");
     return null;
   }
   try {
-    console.log("fetchUserData: Buscando dados com token:", token);
     const response = await fetch(`${API_URL}/api/user/profile`, {
       method: 'GET',
       headers: {
@@ -27,31 +26,59 @@ const fetchUserData = async (token: string | null | undefined): Promise<User | n
         'Authorization': `Bearer ${token}`,
       },
     });
-
     if (response.status === 401 || response.status === 404) {
-      console.warn(`fetchUserData: Falha na autorização ou rota não encontrada (${response.status}).`);
       return null; 
     }
-
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Erro ao buscar dados do usuário.' }));
-      console.error('fetchUserData: Erro HTTP:', response.status, errorData.message);
-      throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
+      throw new Error('Falha ao buscar dados do usuário');
     }
-    
-    const userData = await response.json();
-    console.log("fetchUserData: Dados recebidos:", userData);
-    return {
-      ...userData,
-      avatar: userData.avatar || 'https://w7.pngwing.com/pngs/223/244/png-transparent-computer-icons-avatar-user-profile-avatar-heroes-rectangle-black.png',
-      cards: userData.cards || [],
-      comments: userData.comments || [],
-    };
-
+    const fetchedUser: User = await response.json(); 
+    return fetchedUser;
   } catch (error) {
-    console.error('fetchUserData: Exceção ao buscar dados:', error);
+    console.error('fetchUserData: Exceção:', error);
     return null; 
   }
+};
+
+const fetchUserComments = async (token: string, userId: number): Promise<ApiComentario[] | null> => {
+  console.log(`fetchUserComments: Buscando comentários para userId: ${userId} (MOCK).`);
+  // TODO: Implementar chamada real à API. Ex: /api/comments/user/${userId}
+  // Mock data com a estrutura de ApiComentario:
+  try {
+    // Simulando uma chamada de API que pode falhar ou retornar vazio
+    // if (Math.random() > 0.8) return null; // Simula falha
+    // if (Math.random() > 0.6) return []; // Simula ausência de comentários
+    return [
+      { id: 1, user_id: userId, product_id: 101, comment: 'Ótimo produto mockado!', rating: 5, created_at: '2023-01-15T10:30:00Z', updated_at: '2023-01-15T10:30:00Z' },
+      { id: 2, user_id: userId, product_id: 102, comment: 'Gostei bastante, mockado.', rating: 4, created_at: '2023-01-20T12:00:00Z', updated_at: '2023-01-20T12:00:00Z' },
+      { id: 3, user_id: userId, product_id: 103, comment: 'Poderia ser melhor (mock).', created_at: '2023-02-10T15:00:00Z', updated_at: '2023-02-10T15:00:00Z' }, // Sem rating
+    ];
+  } catch (error) {
+    console.error("fetchUserComments MOCK: Erro simulado", error);
+    return null;
+  }
+};
+
+interface ProfileViewModel extends User {
+  avatar?: string;
+}
+
+const mapApiCartaoToLocalCard = (apiCartao: ApiCartao): LocalCard => {
+  return {
+    id: apiCartao.id,
+    number: `${apiCartao.card_brand || 'Cartão'} final ${apiCartao.card_number_last4 || '****'}`,
+    expiry: apiCartao.card_expiration_date_str || 'N/A',
+  };
+};
+
+const mapApiComentarioToLocalComment = (apiComentario: ApiComentario): LocalComment => {
+  return {
+    id: apiComentario.id,
+    text: apiComentario.comment,
+    productName: apiComentario.produto?.name || `Produto ID: ${apiComentario.product_id}`, // Tenta usar o nome do produto se disponível
+    rating: apiComentario.rating === undefined || apiComentario.rating === null ? 0 : apiComentario.rating, // Garante que rating seja um número, default 0
+    date: new Date(apiComentario.created_at).toLocaleDateString('pt-BR'), // Formata a data
+  };
 };
 
 const ProfilePage = () => {
@@ -59,6 +86,9 @@ const ProfilePage = () => {
   const router = useRouter();
   
   const [userData, setUserData] = useState<User | null>(null);
+  const [avatarUrl, /* setAvatarUrl */] = useState<string>('https://w7.pngwing.com/pngs/223/244/png-transparent-computer-icons-avatar-user-profile-avatar-heroes-rectangle-black.png');
+  const [profileCards, setProfileCards] = useState<LocalCard[]>([]);
+  const [profileComments, setProfileComments] = useState<LocalComment[]>([]);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('info');
 
@@ -67,44 +97,60 @@ const ProfilePage = () => {
       setIsProfileLoading(true);
       return;
     }
-
     if (status === 'unauthenticated') {
       router.push('/auth/login');
       return;
     }
 
-    if (status === 'authenticated' && session) {
+    if (status === 'authenticated' && session?.accessToken) {
       const accessToken = session.accessToken;
-
-      if (!accessToken) {
-        console.error("ProfilePage: Token de acesso não encontrado na sessão.");
-        router.push('/auth/login');
-        return;
-      }
       
-      const getUserProfileData = async () => {
+      const getAllUserProfileData = async () => {
         setIsProfileLoading(true);
         try {
-          const data = await fetchUserData(accessToken as string);
-          if (data) {
-            setUserData(data);
+          const fetchedCoreUser = await fetchUserData(accessToken);
+          if (fetchedCoreUser) {
+            setUserData(fetchedCoreUser);
+
+            if (fetchedCoreUser.cartoes && fetchedCoreUser.cartoes.length > 0) {
+              const mappedCards = fetchedCoreUser.cartoes.map(mapApiCartaoToLocalCard);
+              setProfileCards(mappedCards);
+            } else {
+              setProfileCards([]);
+            }
+
+            const fetchedComments = await fetchUserComments(accessToken, fetchedCoreUser.id);
+            if (fetchedComments && fetchedComments.length > 0) {
+              const mappedComments = fetchedComments.map(mapApiComentarioToLocalComment);
+              setProfileComments(mappedComments);
+            } else {
+              setProfileComments([]);
+            }
+
           } else {
-            console.warn("ProfilePage: Não foi possível obter dados do usuário, redirecionando para login.");
+            setUserData(null);
+            setProfileCards([]);
+            setProfileComments([]);
           }
         } catch (error) {
-          console.error('ProfilePage: Erro ao buscar dados do usuário na página:', error);
+          console.error('ProfilePage: Erro ao buscar todos os dados do perfil:', error);
+          setUserData(null);
+          setProfileCards([]);
+          setProfileComments([]);
         } finally {
           setIsProfileLoading(false);
         }
       };
       
-      getUserProfileData();
+      getAllUserProfileData();
     }
   }, [status, session, router]);
 
-  const handleUpdateUser = (updatedUser: User) => {
-    setUserData(updatedUser);
-    // Aqui você faria a chamada à API para atualizar os dados
+  const handleUpdateUser = (updatedFields: Partial<User>) => {
+    if (userData) {
+      const updatedUserData = { ...userData, ...updatedFields };
+      setUserData(updatedUserData);
+    }
   };
 
   if (status === 'loading' || isProfileLoading) {
@@ -132,14 +178,13 @@ const ProfilePage = () => {
   }
   
   if (!userData) {
-    console.warn("ProfilePage: Renderizando sem userData, apesar de autenticado e profile não estar carregando. Verifique fetchUserData e o token.");
     return (
         <div className="flex flex-col justify-center items-center min-h-screen text-center">
             <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
                 Não foi possível carregar os detalhes do seu perfil no momento.
             </div>
             <button 
-              onClick={() => router.refresh()}
+              onClick={() => router.refresh()} 
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
               Tentar Novamente
@@ -148,21 +193,26 @@ const ProfilePage = () => {
     );
   }
 
+  const profileViewData: ProfileViewModel = {
+    ...userData,
+    avatar: avatarUrl,
+  };
+
   const tabs: Tab[] = [
     {
       id: 'info',
       label: 'Informações Pessoais',
-      component: <PersonalInfo user={userData} onUpdate={handleUpdateUser} />
+      component: <PersonalInfo user={profileViewData} onUpdate={handleUpdateUser} />
     },
     {
       id: 'cards',
       label: 'Cartões',
-      component: <Cards cards={userData.cards || []} onUpdate={handleUpdateUser} />
+      component: <Cards cards={profileCards} onUpdate={(updatedCards) => { setProfileCards(updatedCards); }} />
     },
     {
       id: 'comments',
       label: 'Avaliações',
-      component: <Comments comments={userData.comments || []} onUpdate={handleUpdateUser} />
+      component: <Comments comments={profileComments} onUpdate={(updatedComments) => { setProfileComments(updatedComments); }} />
     },
     {
       id: 'security',
@@ -177,7 +227,7 @@ const ProfilePage = () => {
       style={{ animationFillMode: 'forwards' }}
     >
       <div className="bg-white rounded-lg shadow-lg">
-        <ProfileHeader user={userData} />
+        <ProfileHeader user={profileViewData} />
         <TabNavigation 
           tabs={tabs} 
           activeTab={activeTab} 
