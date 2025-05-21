@@ -4,8 +4,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { useCart } from '@/contexts/CartContext';
-import { ShoppingCartIcon, LogOut, User, Settings, Shield } from 'lucide-react';
+import { LogOut, User, Settings, Shield } from 'lucide-react';
+import CartIcon from './CartIcon';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +21,6 @@ const Navbar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
-  const { totalItems } = useCart();
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
@@ -86,14 +85,7 @@ const Navbar = () => {
           </div>
           
           <div className="flex items-center space-x-4">
-            <Link href="/carrinho" className="relative text-gray-600 hover:text-green-600 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200">
-              <ShoppingCartIcon className="h-6 w-6" />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 block h-5 w-5 rounded-full ring-2 ring-white bg-red-500 text-white text-xs font-bold flex items-center justify-center">
-                  {totalItems}
-                </span>
-              )}
-            </Link>
+            <CartIcon />
 
             {session ? (
               <DropdownMenu >
