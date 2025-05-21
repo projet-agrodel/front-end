@@ -4,4 +4,5 @@ export type AuthUser = {
     email: string;
     role: 'admin' | 'user';
     image?: string | null;
+    accessToken?: string;
  };
