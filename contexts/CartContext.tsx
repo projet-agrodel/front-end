@@ -54,7 +54,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/products/${productId}/availability`, {
+      const response = await fetch(`${API_URL}/api/products/${productId}/availability?quantity=${quantityRequested}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -67,27 +67,18 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       }
 
       const availability = await response.json();
-      const currentStock = availability.stock || 0;
       
-      // Verifica se a quantidade solicitada está disponível
-      const currentItemInCart = cartItems.find(item => item.produto_id === productId);
-      const quantityInCart = currentItemInCart?.quantity || 0;
-      
-      // Para atualização de quantidade, consideramos a quantidade solicitada total
-      // Para adição ao carrinho, consideramos a soma da quantidade solicitada + quantidade já no carrinho
-      const isUpdate = quantityInCart > 0 && quantityRequested >= quantityInCart;
-      const totalRequested = isUpdate ? quantityRequested : (quantityInCart + quantityRequested);
-      
+      // Usar diretamente o formato de resposta do novo endpoint
       return { 
-        available: totalRequested <= currentStock,
-        currentStock
+        available: availability.available,
+        currentStock: availability.stock
       };
     } catch (err) {
       console.error("Erro ao verificar disponibilidade:", err);
       // Em caso de erro, assumimos que o produto não está disponível para segurança
       return { available: false, currentStock: 0 };
     }
-  }, [cartItems, session]);
+  }, [session]);
 
   // Função para buscar o carrinho da API
   const fetchApiCart = useCallback(async () => {
