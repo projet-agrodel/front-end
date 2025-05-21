@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useCart } from '@/contexts/CartContext';
-import { ShoppingCartIcon, UserCircle2, LogOut, User, Settings, Shield } from 'lucide-react';
+import { ShoppingCartIcon, LogOut, User, Settings, Shield } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,

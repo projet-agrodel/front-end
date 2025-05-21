@@ -15,7 +15,7 @@ export const authOptions: AuthOptions = {
       },
       async authorize(credentials): Promise<AuthUser | null> {
         try {
-          const response = await fetch(`http://127.0.0.1:5000/auth/login`, {
+          const response = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -28,16 +28,17 @@ export const authOptions: AuthOptions = {
 
           const data = await response.json();
 
-          if (!response.ok || !data) {
-            throw new Error(data.message || 'Credenciais inválidas');
+          if (!response.ok || !data || !data.access_token) {
+            throw new Error(data.message || 'Credenciais inválidas ou token não retornado');
           }
 
-        return {
+          return {
             id: data.user.id,
             name: data.user.name,
             email: data.user.email,
             role: data.user.type,
-        } as AuthUser;
+            accessToken: data.access_token,
+          } as AuthUser;
           
         } catch (error) {
           console.error('Erro na autenticação:', error);
@@ -48,25 +49,27 @@ export const authOptions: AuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      let user_2 = user as AuthUser
+      const typedUser = user as AuthUser;
 
-      if (user_2) {
-        token.role = user_2.role;
-     }
+      if (typedUser) {
+        token.sub = typedUser.id;
+        token.role = typedUser.role;
+        token.email = typedUser.email;
+        token.name = typedUser.name;
+        token.accessToken = typedUser.accessToken;
+      }
 
-     if (user?.id) {
-        token.sub = user.id;
-     }
-
-     return token;
+      return token;
     },
     async session({ session, token }) {
-        if (session.user) {
-            session.user.role = token.role as string;
-            session.user.id = token.sub as string;
-         }
+      if (session.user) {
+        session.user.role = token.role as string;
+        session.user.id = token.sub as string;
+      }
 
-         return session;
+      session.accessToken = token.accessToken as string;
+      
+      return session;
     }
   },
   pages: {

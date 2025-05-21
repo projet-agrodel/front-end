@@ -8,15 +8,18 @@ export default withAuth(
     const isAdmin = token?.role === 'admin';
 
     // Se tentar acessar rota admin sem ser admin
-   // if (isAdminRoute && !isAdmin) {
-   //   return NextResponse.redirect(new URL('/auth/login', req.url));
-   // }
+    if (isAdminRoute && !isAdmin) {
+      // Redireciona para a página inicial ou uma página de "Não Autorizado"
+      return NextResponse.redirect(new URL('/', req.url)); 
+    }
 
     return NextResponse.next();
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token
+      authorized: ({ token }) => {
+        return !!token; // Garante que o usuário está logado para todas as rotas no matcher.
+      }
     },
   }
 );

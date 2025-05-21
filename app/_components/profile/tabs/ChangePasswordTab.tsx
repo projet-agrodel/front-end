@@ -14,7 +14,11 @@ interface NewPasswordCriteria {
   number: boolean;
 }
 
-export const ChangePasswordTab: React.FC = () => {
+interface ChangePasswordTabProps {
+  accessToken: string | undefined; // Adicionar prop accessToken
+}
+
+export const ChangePasswordTab: React.FC<ChangePasswordTabProps> = ({ accessToken }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -86,19 +90,17 @@ export const ChangePasswordTab: React.FC = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
+      if (!accessToken) {
         setMessage('Você não está autenticado. Faça login novamente.');
         setIsLoading(false);
-        // Idealmente, redirecionar para login ou mostrar um erro mais proeminente
         return;
       }
 
-      const response = await fetch(`${API_URL}/user/change-password`, { // Endpoint a ser criado no backend
+      const response = await fetch(`${API_URL}/api/user/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           currentPassword: currentPassword,
