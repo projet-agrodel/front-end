@@ -7,6 +7,7 @@ import Navbar from "./_components/navebar/NaveBar";
 import Footer from "./_components/Footer";
 import { CartProvider } from "@/contexts/CartContext";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SessionProvider } from "next-auth/react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 flex flex-col min-h-screen`}
       >
+       <SessionProvider>
         <QueryClientProvider client={queryClient}>
           <CartProvider>
             <Navbar />
@@ -39,6 +41,7 @@ export default function RootLayout({
             <Footer />
           </CartProvider>
         </QueryClientProvider>
+        </SessionProvider> 
       </body>
     </html>
   );

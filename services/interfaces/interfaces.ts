@@ -1,3 +1,5 @@
+import { TicketPriority, TicketStatus, TypeUser } from "../types/types";
+
 // Tipo base para timestamps
 interface Timestamps {
   created_at: string;
@@ -10,7 +12,7 @@ export interface User extends Timestamps {
   email: string;
   password: string;
   phone: string;
-  type: 'admin' | 'client';
+  type: TypeUser;
 
   // Relacionamentos
   cartoes?: Cartao[];
@@ -110,8 +112,8 @@ export interface Ticket extends Timestamps {
   user_id: number;
   title: string;
   description?: string;
-  status: 'Aberto' | 'Em Andamento' | 'Resolvido' | 'Fechado';
-  priority: 'Baixa' | 'Média' | 'Alta' | 'Urgente';
+  status: TicketStatus
+  priority: TicketPriority
 
   // Relacionamentos
   user?: User;

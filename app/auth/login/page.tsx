@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { signIn } from 'next-auth/react';
 import ForgotPasswordPopup from '../_components/ForgotPasswordPopup';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -27,54 +28,35 @@ type LoginFormData = z.infer<typeof loginSchema>;
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPasswordPopup, setShowForgotPasswordPopup] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
-    setError,
+    formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+      const result = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        redirect: false,
       });
 
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.message || 'Email ou senha inválidos.');
+      if (result?.error) {
+        setError(result.error);
+        return;
       }
 
-      if (responseData.access_token) {
-        console.log('Login successful for:', data.email);
-        localStorage.setItem('token', responseData.access_token);
-        if (responseData.user && responseData.user.name) {
-          localStorage.setItem('userName', responseData.user.name);
-        } else {
-          localStorage.removeItem('userName');
-        }
-        router.push('/');
-      } else {
-        setError('root', {
-          message: 'Token de acesso não recebido.',
-        });
-      }
-
+      router.push('/');
+      
     } catch (err) {
       console.error('Login error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro durante o login.';
-      setError('root', {
-        message: errorMessage,
-      });
+      setError('Ocorreu um erro durante o login.');
     }
   };
 
@@ -118,13 +100,13 @@ const LoginPage = () => {
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          {errors.root && (
+          {error && (
             <motion.p 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-md"
             >
-              {errors.root.message}
+              {error}
             </motion.p>
           )}
           
