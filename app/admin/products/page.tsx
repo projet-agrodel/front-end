@@ -11,18 +11,8 @@ import {
     AdminProduct,
     CreateAdminProductPayload,
     UpdateAdminProductPayload,
-} from '../../../services/adminProductService'; // GetAdminProductsParams removido da importação
-
-// Simulação de como obter o token. Substituir pela lógica real de autenticação.
-const getAuthTokenForAdmin = (): string | null => {
-    if (typeof window !== 'undefined') {
-        // Exemplo: return localStorage.getItem('adminAuthToken');
-        // Por agora, retornando um token mockado. REMOVER EM PRODUÇÃO.
-        
-        return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc0Nzc3NTQ1MSwianRpIjoiNDI3MGFmYjctY2JjZS00ZmJmLTk3OWItZTNjZTQ5NjdlMTk1IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjMiLCJuYmYiOjE3NDc3NzU0NTEsImNzcmYiOiJkNTU1OWQyYi0yZTdhLTQ1OGMtYTk5Mi0yYTk3YmI0OGQ4ZDAiLCJleHAiOjE3NDc3NzkwNTEsImlzX2FkbWluaXN0cmF0b3IiOnRydWV9.O4VFL-WhlTt8OwmcDEDRvXvplnPMkKBloJjQ5Xte4e0'; 
-    }
-    return null;
-};
+} from '../../../services/adminProductService';
+import { getAuthTokenForAdmin } from '../../../utils/authAdmin'; // Caminho corrigido
 
 // Interface para os dados exibidos na tabela e passados para o formulário como initialData
 interface DisplayProduct {

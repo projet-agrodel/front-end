@@ -3,6 +3,7 @@
 import React from 'react';
 import DateRangeFilter from './_components/DateRangeFilter';
 import AnalyticsCard from './_components/AnalyticsCard';
+import SalesByCategoryChart from './_components/SalesByCategoryChart';
 
 // Componentes placeholder para o conteúdo dos cards (a serem desenvolvidos)
 const PlaceholderContent = ({ text }: { text: string }) => (
@@ -25,7 +26,7 @@ export default function AdvancedAnalyticsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         
         <AnalyticsCard title="Vendas por Categoria" colSpan="xl:col-span-2">
-          <PlaceholderContent text="Gráfico de Pizza/Barras: Vendas por Categoria" />
+          <SalesByCategoryChart />
         </AnalyticsCard>
 
         <AnalyticsCard title="Ticket Médio">
