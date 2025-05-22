@@ -2,11 +2,12 @@
 
 import React from 'react';
 import DateRangeFilter from './_components/DateRangeFilter';
-import AnalyticsCard from './_components/AnalyticsCard';
+import AnalyticsCard, { AnalyticsCardProps } from './_components/AnalyticsCard';
 import SalesByCategoryChart from './_components/SalesByCategoryChart';
 import { 
   PieChart, Activity, Package, Users, 
-  TrendingUp, TrendingDown, CircleDollarSign, BarChart3
+  TrendingUp, TrendingDown, CircleDollarSign, BarChart3,
+  CreditCard, ShoppingCart, UsersRound, PackageSearch // Novos ícones
 } from 'lucide-react';
 import {
   MiniProgressCircle,
@@ -14,6 +15,7 @@ import {
   MiniBarChart,
   MiniDonutChart
 } from './_components/MiniCharts';
+import { motion } from 'framer-motion';
 
 // Componentes placeholder para o conteúdo dos cards (a serem desenvolvidos)
 const PlaceholderContent = ({ text }: { text: string }) => (
@@ -24,21 +26,14 @@ const PlaceholderContent = ({ text }: { text: string }) => (
 );
 
 // Indicador de tendência com seta para cima ou para baixo
-const TrendIndicator = ({ value, direction }: { value: string, direction: 'up' | 'down' | 'neutral' }) => {
+const TrendIndicator = ({ value, direction, colorClass }: { value: string, direction: 'up' | 'down' | 'neutral', colorClass: string }) => {
   const getIcon = () => {
-    if (direction === 'up') return <TrendingUp size={14} className="text-green-500" />;
-    if (direction === 'down') return <TrendingDown size={14} className="text-red-500" />;
+    if (direction === 'up') return <TrendingUp size={14} className={colorClass} />;
+    if (direction === 'down') return <TrendingDown size={14} className={colorClass} />;
     return null;
   };
-
-  const getTextColor = () => {
-    if (direction === 'up') return 'text-green-500';
-    if (direction === 'down') return 'text-red-500';
-    return 'text-gray-500';
-  };
-
   return (
-    <div className={`flex items-center gap-1 ${getTextColor()} text-xs font-medium`}>
+    <div className={`flex items-center gap-1 ${colorClass} text-xs font-medium`}>
       {getIcon()}
       <span>{value}</span>
     </div>
@@ -51,308 +46,188 @@ const CardValue = ({
   subtitle, 
   trend, 
   trendDirection,
-  chartComponent 
+  chartComponent,
+  isDarkBg = false // Nova prop para ajustar cores de texto/trend
 }: { 
   value: string, 
   subtitle?: string,
   trend?: string, 
   trendDirection?: 'up' | 'down' | 'neutral',
-  chartComponent?: React.ReactNode
-}) => (
-  <div className="mt-2">
-    <div className="flex items-start justify-between">
-      <div className="flex-1">
-        <div className="text-2xl font-bold">{value}</div>
-        {subtitle && (
-          <p className="text-xs mt-1 opacity-80">{subtitle}</p>
-        )}
-        {trend && trendDirection && (
-          <div className="mt-1.5">
-            <div className="bg-white/20 rounded-full px-2 py-0.5 inline-flex">
-              <TrendIndicator value={trend} direction={trendDirection} />
+  chartComponent?: React.ReactNode,
+  isDarkBg?: boolean
+}) => {
+    const trendColorClass = trendDirection === 'up' ? (isDarkBg ? 'text-green-300' : 'text-green-500') 
+                         : trendDirection === 'down' ? (isDarkBg ? 'text-red-300' : 'text-red-500') 
+                         : (isDarkBg ? 'text-gray-300' : 'text-gray-500');
+    
+    return (
+        <div className="mt-2">
+            <div className="flex items-start justify-between">
+            <div className="flex-1">
+                <div className={`text-2xl md:text-3xl font-bold ${isDarkBg ? 'text-white' : 'text-gray-900'}`}>{value}</div>
+                {subtitle && (
+                <p className={`text-xs mt-1 ${isDarkBg ? 'opacity-80 text-white/90' : 'text-gray-600'}`}>{subtitle}</p>
+                )}
+                {trend && trendDirection && trendDirection !== 'neutral' && (
+                <div className="mt-1.5">
+                    <div className={`rounded-full px-2 py-0.5 inline-flex ${isDarkBg ? 'bg-white/20' : 'bg-gray-100'}`}>
+                       <TrendIndicator value={trend} direction={trendDirection} colorClass={trendColorClass} />
+                    </div>
+                </div>
+                )}
+                 {/* Caso para trend neutro sem ícone, apenas texto */}
+                {trend && trendDirection === 'neutral' && (
+                    <div className="mt-1.5">
+                         <p className={`text-xs ${isDarkBg ? 'text-gray-300' : 'text-gray-500'}`}>{trend}</p>
+                    </div>
+                )}
             </div>
-          </div>
-        )}
-      </div>
-      {chartComponent && (
-        <div className="ml-4 flex items-end">
-          {chartComponent}
+            {chartComponent && (
+                <div className="ml-4 flex items-end">
+                {chartComponent}
+                </div>
+            )}
+            </div>
         </div>
-      )}
-    </div>
-  </div>
-);
+    );
+};
 
 // Dados para visualizações
 const monthlyData = [42, 38, 55, 63, 70, 62, 58];
 const categoryPercentages = [35, 25, 18, 15, 7]; // Frutas, Vegetais, Ovos, Lácteos, Outros
 const weekdayData = [30, 45, 65, 50, 35, 20, 15]; // Seg a Dom
 
+const pageVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { staggerChildren: 0.1 } }, // stagger AnalyticsCard
+  exit: { opacity: 0 }
+};
+
+const headerVariants = {
+  initial: { opacity: 0, y: -20 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
+};
+
 export default function AdvancedAnalyticsPage() {
+  // Definir quais cards usam fundo escuro para CardValue
+  const darkBgVariants: Array<AnalyticsCardProps['variant']> = ['primary', 'secondary', 'success', 'danger', 'warning'];
+
+  const analyticsCardsData = [
+    {
+      title: "Total Vendas",
+      icon: <CircleDollarSign size={20} />,
+      variant: "primary",
+      summary: { value: "R$ 612.917", subtitle: "Vendas vs último mês", trend: "+2,08%", trendDirection: "up" },
+      chart: <MiniSparkline data={monthlyData} color="#FFFFFF" height={40} width={80} />,
+      modalContent: <div>... (conteúdo do modal vendas) ...</div>,
+      modalDescription: "Análise completa de vendas no período selecionado."
+    },
+    {
+      title: "Total Pedidos",
+      icon: <ShoppingCart size={20} />,
+      variant: "secondary", // Alterado para secondary
+      summary: { value: "34.760", subtitle: "Pedidos vs último mês", trend: "+12,4%", trendDirection: "up" },
+      chart: <MiniBarChart data={weekdayData} color="#FFFFFF" />,
+      modalContent: <PlaceholderContent text="Detalhamento dos pedidos" />,
+      modalDescription: "Análise detalhada dos pedidos no período."
+    },
+    {
+      title: "Produtos Vendidos", // Renomeado para melhor clareza
+      icon: <PackageSearch size={20} />,
+      variant: "success", // Alterado para success
+      summary: { value: "9.829", subtitle: "Itens vendidos", trend: "+5,34%", trendDirection: "up" },
+      chart: <MiniDonutChart percentages={categoryPercentages} colors={['#a7f3d0', '#6ee7b7', '#34d399', '#10b981', '#059669']} />,
+      modalContent: <SalesByCategoryChart />,
+      modalDescription: "Distribuição de vendas por categoria de produto."
+    },
+    {
+      title: "Novos Clientes",
+      icon: <UsersRound size={20} />,
+      variant: "warning", // Usando a nova variante
+      summary: { value: "1.254", subtitle: "Clientes vs último mês", trend: "+8,2%", trendDirection: "up" },
+      chart: <MiniProgressCircle percentage={75} color="#854d0e" bgColor="#fde68a" />,
+      modalContent: <PlaceholderContent text="Análise de novos clientes" />,
+      modalDescription: "Análise de aquisição de novos clientes."
+    },
+    // Card Visitantes permanece default, pois o vermelho é danger
+    {
+      title: "Visitantes Únicos",
+      icon: <Users size={20} />,
+      variant: "default", // Mantido como default, mas o CardValue precisa saber para o TrendIndicator
+      summary: { value: "14.987", subtitle: "Usuários vs último mês", trend: "-2,08%", trendDirection: "down" },
+      chart: <MiniProgressCircle percentage={62} color="#ef4444" />,
+      modalContent: <PlaceholderContent text="Análise de visitantes" />,
+      modalDescription: "Análise detalhada de visitantes e comportamento."
+    },
+     {
+      title: "Taxa de Conversão",
+      icon: <TrendingUp size={20} />,
+      variant: "default",
+      summary: { value: "4,8%", subtitle: "Conversão vs último mês", trend: "+0.5%", trendDirection: "up" },
+      chart: <MiniSparkline data={[2, 3, 5, 4, 6, 7, 8]} color="#4f46e5" height={40} width={80}/>,
+      modalContent: <PlaceholderContent text="Análise da Taxa de Conversão" />,
+      modalDescription: "Detalhes sobre a taxa de conversão de visitantes para clientes."
+    },
+    {
+      title: "Ticket Médio",
+      icon: <CreditCard size={20} />,
+      variant: "default",
+      summary: { value: "R$ 125,30", subtitle: "Ticket vs último mês", trend: "-1,2%", trendDirection: "down" },
+      chart: <MiniBarChart data={[100,120,110,130,125,115,128]} color="#8b5cf6"/>,
+      modalContent: <PlaceholderContent text="Análise do Ticket Médio" />,
+      modalDescription: "Análise do valor médio por pedido."
+    },
+    {
+      title: "Atividade Recente",
+      icon: <Activity size={20} />,
+      variant: "default",
+      summary: { value: "27 min atrás", subtitle: "Última venda realizada", trend: "", trendDirection: "neutral" }, // Sem trend explícito
+      // Sem chart para este
+      modalContent: <PlaceholderContent text="Log de atividades recentes" />,
+      modalDescription: "Visualização das últimas atividades na plataforma."
+    }
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* 1. CABEÇALHO DA PÁGINA E FILTRO DE PERÍODO GLOBAL */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Análise Avançada</h1>
+    <motion.div 
+      className="space-y-6 md:space-y-8 p-4 md:p-6 lg:p-8 bg-gray-50 min-h-screen"
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+    >
+      <motion.div 
+        className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 md:mb-10"
+        variants={headerVariants}
+      >
+        <h1 className="text-3xl lg:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-slate-700 to-gray-900">Análise Avançada</h1>
         <DateRangeFilter />
+      </motion.div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-6">
+        {analyticsCardsData.map((card, idx) => (
+          <AnalyticsCard 
+            key={card.title} 
+            title={card.title}
+            icon={card.icon}
+            variant={card.variant as AnalyticsCardProps['variant']} // Cast para garantir tipo
+            index={idx} // Passando index para animação escalonada
+            colSpan={idx === 0 || idx === analyticsCardsData.length -1 ? "sm:col-span-2 lg:col-span-1 xl:col-span-1" : ""} // Ajuste experimental de colspan
+            summaryContent={
+              <CardValue 
+                value={card.summary.value} 
+                subtitle={card.summary.subtitle}
+                trend={card.summary.trend}
+                trendDirection={card.summary.trendDirection as 'up' | 'down' | 'neutral'}
+                chartComponent={card.chart}
+                isDarkBg={darkBgVariants.includes(card.variant as AnalyticsCardProps['variant'])}
+              />
+            }
+            modalContent={card.modalContent}
+            modalDescription={card.modalDescription}
+          />
+        ))}
       </div>
-
-      {/* 2. GRADE DE CARDS DE ANÁLISE */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        
-        {/* Card Vendas Totais - Com gráfico de linha */}
-        <AnalyticsCard 
-          title="Total Vendas"
-          icon={<CircleDollarSign size={20} />}
-          variant="primary"
-          colSpan="lg:col-span-1"
-          summaryContent={
-            <CardValue 
-              value="R$ 612.917" 
-              subtitle="Vendas vs último mês"
-              trend="+2,08%" 
-              trendDirection="up"
-              chartComponent={
-                <MiniSparkline 
-                  data={monthlyData}
-                  color="#ffffff"
-                  height={40}
-                  width={80}
-                />
-              }
-            />
-          }
-          modalContent={
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-sm font-medium text-gray-500">Vendas no Período</h3>
-                  <p className="text-2xl font-bold mt-2">R$ 612.917</p>
-                  <TrendIndicator value="+2,08% vs último mês" direction="up" />
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-sm font-medium text-gray-500">Ticket Médio</h3>
-                  <p className="text-2xl font-bold mt-2">R$ 125,30</p>
-                  <TrendIndicator value="+12,5% vs último mês" direction="up" />
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-sm font-medium text-gray-500">Qtd. Vendas</h3>
-                  <p className="text-2xl font-bold mt-2">4.892</p>
-                  <TrendIndicator value="-0,7% vs último mês" direction="down" />
-                </div>
-              </div>
-              <div>
-                <h3 className="font-medium mb-4">Evolução de Vendas</h3>
-                <PlaceholderContent text="Gráfico de evolução de vendas" />
-              </div>
-              <div>
-                <h3 className="font-medium mb-4">Relatório de Vendas</h3>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantidade</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <tr key={i}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Produto {i}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{i * 5}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">R$ {i * 100},00</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">01/0{i}/2024</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          }
-          modalDescription="Análise completa de vendas no período selecionado."
-        />
-        
-        {/* Card Total de Pedidos com barras de progresso */}
-        <AnalyticsCard 
-          title="Total Pedidos"
-          icon={<Package size={20} />}
-          variant="default"
-          colSpan="lg:col-span-1"
-          summaryContent={
-            <CardValue 
-              value="34.760" 
-              subtitle="Pedidos vs último mês"
-              trend="+12,4%" 
-              trendDirection="up"
-              chartComponent={
-                <MiniBarChart 
-                  data={weekdayData}
-                  color="#4f46e5"
-                />
-              }
-            />
-          }
-          modalContent={<PlaceholderContent text="Detalhamento dos pedidos" />}
-          modalDescription="Análise detalhada dos pedidos no período."
-        />
-
-        {/* Card de Estatísticas de Produtos com mini donut */}
-        <AnalyticsCard 
-          title="Estatísticas de Produtos"
-          icon={<PieChart size={20} />}
-          variant="default"
-          colSpan="lg:col-span-1"
-          summaryContent={
-            <CardValue 
-              value="9.829" 
-              subtitle="Produtos vendidos"
-              trend="+5,34%" 
-              trendDirection="up"
-              chartComponent={
-                <MiniDonutChart 
-                  percentages={categoryPercentages} 
-                  colors={['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']}
-                />
-              }
-            />
-          }
-          modalContent={<SalesByCategoryChart />}
-          modalDescription="Análise detalhada das vendas distribuídas por categoria de produto."
-        />
-        
-        {/* Card de Visitantes - com círculo de progresso */}
-        <AnalyticsCard 
-          title="Visitantes"
-          icon={<Users size={20} />}
-          variant="danger"
-          colSpan="lg:col-span-1"
-          summaryContent={
-            <CardValue 
-              value="14.987" 
-              subtitle="Usuários vs último mês"
-              trend="-2,08%" 
-              trendDirection="down"
-              chartComponent={
-                <MiniProgressCircle 
-                  percentage={62} 
-                  color="#ef4444"
-                />
-              }
-            />
-          }
-          modalContent={<PlaceholderContent text="Análise de visitantes" />}
-          modalDescription="Análise detalhada de visitantes e comportamento."
-        />
-
-        {/* Card Produtos Vendidos */}
-        <AnalyticsCard 
-          title="Produtos Vendidos"
-          icon={<BarChart3 size={20} />}
-          variant="success"
-          colSpan="lg:col-span-2 xl:col-span-2"
-          summaryContent={
-            <div className="mt-2">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-2xl font-bold">12.987</div>
-                  <p className="text-xs mt-1 opacity-80">Produtos vs último mês</p>
-                  <div className="mt-1.5">
-                    <div className="bg-white/20 rounded-full px-2 py-0.5 inline-flex">
-                      <TrendIndicator value="+12,1%" direction="up" />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex flex-wrap gap-2 justify-end">
-                  <div className="text-right">
-                    <div className="text-xs opacity-80">Frutas</div>
-                    <div className="text-sm font-bold">4.521</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs opacity-80">Vegetais</div>
-                    <div className="text-sm font-bold">3.246</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs opacity-80">Outros</div>
-                    <div className="text-sm font-bold">5.220</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          }
-          modalContent={<PlaceholderContent text="Detalhamento dos produtos vendidos" />}
-          modalDescription="Análise detalhada dos produtos vendidos no período."
-        />
-
-        {/* Card de Hábitos dos Clientes - com mini barras */}
-        <AnalyticsCard 
-          title="Hábitos dos Clientes"
-          icon={<Activity size={20} />}
-          variant="secondary"
-          colSpan="lg:col-span-2 xl:col-span-2"
-          summaryContent={
-            <div className="mt-2 flex items-start justify-between">
-              <div>
-                <p className="text-xs opacity-80">Produtos vistos vs comprados</p>
-                <div className="text-2xl font-bold mt-1">38.4%</div>
-                <div className="mt-1.5">
-                  <div className="bg-white/20 rounded-full px-2 py-0.5 inline-flex">
-                    <TrendIndicator value="+5,2%" direction="up" />
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-end">
-                <MiniBarChart 
-                  data={[65, 42, 38, 27, 35, 48, 55]}
-                  color="#ffffff"
-                  width={120}
-                  height={50}
-                />
-              </div>
-            </div>
-          }
-          modalContent={
-            <div>
-              <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                <h3 className="text-lg font-medium">Visualização vs Conversão</h3>
-                <PlaceholderContent text="Gráfico detalhado de visualizações vs vendas" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-medium mb-2">Produtos mais visualizados</h3>
-                  <ul className="space-y-2">
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <li key={i} className="bg-white p-3 rounded shadow-sm">
-                        <div className="flex justify-between">
-                          <span>Produto {i}</span>
-                          <span className="font-medium">{(6-i)*240} views</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="font-medium mb-2">Maior taxa de conversão</h3>
-                  <ul className="space-y-2">
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <li key={i} className="bg-white p-3 rounded shadow-sm">
-                        <div className="flex justify-between">
-                          <span>Produto {i+5}</span>
-                          <span className="font-medium">{(6-i)*10}%</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          }
-          modalDescription="Análise detalhada do comportamento dos clientes e padrões de compra."
-        />
-      </div>
-    </div>
+    </motion.div>
   );
 } 
