@@ -1,193 +1,205 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { TicketDetail } from '@/app/_components/ticket/TicketDetail';
+import React, { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/app/_components/ui/button';
+import { Card, CardContent, CardHeader } from '@/app/_components/ui/card';
+import { Textarea } from '@/app/_components/ui/textarea';
+import { Badge } from '@/app/_components/ui/badge';
 import { ArrowLeftIcon } from '@/app/_components/icons/arrow-left';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Ticket, TicketMessage } from '@/services/interfaces/interfaces';
+import { toast } from 'sonner';
+import { TicketPriority, TicketStatus } from '@/services/types/types';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from '@/app/_components/ui/form';
+import { useSession } from 'next-auth/react';
 
-// Dados de exemplo para demonstração
-const mockTickets = [
-  {
-    id: 1,
-    user_id: 1,
-    title: 'Problema ao fazer login',
-    description: 'Não consigo acessar minha conta, a página fica carregando infinitamente quando tento fazer login.',
-    status: 'Aberto',
-    priority: 'Alta',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    messages: [{
-      id: 1,
-      ticket_id: 1,
-      user_id: 1,
-      message: 'Por favor, me ajudem a resolver esse problema urgente.',
-      created_at: new Date().toISOString(),
-    }]
-  },
-  {
-    id: 2,
-    user_id: 2,
-    title: 'Dúvida sobre faturamento',
-    description: 'Estou com dúvidas sobre a cobrança no meu cartão que apareceu este mês.',
-    status: 'Em Andamento',
-    priority: 'Média',
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 dias atrás
-    updated_at: new Date(Date.now() - 86400000).toISOString(), // 1 dia atrás
-    messages: [{
-      id: 2,
-      ticket_id: 2,
-      user_id: 2,
-      message: 'Gostaria de entender melhor sobre a cobrança.',
-      created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    }]
-  },
-] as Ticket[];
+const statusColors: Record<TicketStatus, string> = {
+  Aberto: 'bg-green-100 text-green-800',
+  'Em Andamento': 'bg-purple-100 text-purple-800',
+  Resolvido: 'bg-teal-100 text-teal-800',
+  Fechado: 'bg-gray-100 text-gray-800',
+};
 
-// Mensagens de exemplo
-const mockMessages = [
-  {
-    id: 1,
-    ticket_id: 1,
-    user_id: 1,
-    message: 'Não consigo acessar minha conta. A página fica carregando infinitamente.',
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 dias atrás
-  },
-  {
-    id: 2,
-    ticket_id: 1,
-    user_id: null,
-    message: 'Olá! Poderia por favor nos informar qual navegador está utilizando e se tentou limpar o cache?',
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 dias atrás
-  },
-  {
-    id: 3,
-    ticket_id: 1,
-    user_id: 1,
-    message: 'Estou usando o Chrome versão 108. Já tentei limpar o cache e os cookies, mas o problema persiste.',
-    created_at: new Date(Date.now() - 86400000 * 1).toISOString(), // 1 dia atrás
-  },
-  {
-    id: 4,
-    ticket_id: 1,
-    user_id: null,
-    message: 'Obrigado pelas informações. Vamos verificar o problema e retornaremos em breve.',
-    created_at: new Date(Date.now() - 86400000 * 0.5).toISOString(), // 12 horas atrás
-  },
-] as TicketMessage[];
+const priorityColors: Record<TicketPriority, string> = {
+  Baixa: 'bg-blue-100 text-blue-800',
+  Média: 'bg-yellow-100 text-yellow-800',
+  Alta: 'bg-orange-100 text-orange-800',
+  Urgente: 'bg-red-100 text-red-800',
+};
 
-export default function TicketDetailPage({ params }: { params: { id: string } }) {
-  // Extrai e converte o ID diretamente dos params
-  const ticketId = parseInt(params.id, 10); // Adiciona radix 10 para segurança
+const messageFormSchema = z.object({
+  message: z.string().min(1, 'A mensagem não pode estar vazia'),
+});
 
-  const [ticket, setTicket] = useState<Ticket | null>(null);
-  const [messages, setMessages] = useState<TicketMessage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter(); // Adiciona se for necessário para navegação programática
+type MessageFormValues = z.infer<typeof messageFormSchema>;
 
-  useEffect(() => {
-    if (isNaN(ticketId)) {
-      // Se o ID não for um número válido, redireciona ou mostra notFound
-      console.error("ID de ticket inválido:", params.id);
-      return notFound(); // Ou router.push('/tickets') ou outra lógica
-    }
+export default function TicketPage() {
+  const { data: session } = useSession()
+  const params = useParams();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const ticketId = Number(params.id);
 
-    // Simulação de busca de dados (API ou mock)
-    setIsLoading(true); // Inicia o carregamento
-    console.log("Buscando ticket com ID:", ticketId);
+  const form = useForm<MessageFormValues>({
+    resolver: zodResolver(messageFormSchema),
+    defaultValues: {
+      message: '',
+    },
+  });
 
-    // Simula atraso da API
-    const timer = setTimeout(() => {
-      const foundTicket = mockTickets.find(t => t.id === ticketId);
-      console.log("Ticket encontrado:", foundTicket);
+  const { data: ticket, isLoading: isLoadingTicket } = useQuery<Ticket>({
+    queryKey: ['ticket', ticketId],
+    queryFn: async () => {
+      const response = await fetch(`http://localhost:5000/api/tickets/${ticketId}`);
+      if (!response.ok) throw new Error('Erro ao carregar ticket');
+      return response.json();
+    },
+  });
 
-      if (foundTicket) {
-        setTicket(foundTicket); // Define como Ticket, não precisa de 'as Ticket'
-        const ticketMessages = mockMessages.filter(m => m.ticket_id === ticketId);
-        setMessages(ticketMessages);
-      } else {
-        // Se não encontrou o ticket após a busca (mesmo com ID válido)
-        console.log("Ticket não encontrado no mock após busca.");
-        notFound();
-      }
-      setIsLoading(false); // Finaliza o carregamento
-    }, 500); // Simula 500ms de delay
+  const sendMessageMutation = useMutation({
+    mutationFn: async (data: MessageFormValues) => {
+      const response = await fetch(`http://localhost:5000/api/tickets/${ticketId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: session?.user.id, ...data }),
+      });
+      if (!response.ok) throw new Error('Erro ao enviar mensagem');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticketMessages', ticketId] });
+      form.reset();
+      toast('Mensagem enviada', {    
+        description: 'Sua mensagem foi enviada com sucesso.',
+      });
+    },
+    onError: () => {
+      toast('Erro', {    
+        description: 'Não foi possível enviar a mensagem.',        
+      });
+    },
+  });
 
-    return () => clearTimeout(timer); // Limpa o timeout se o componente desmontar
+  const onSubmit = (data: MessageFormValues) => {
+    sendMessageMutation.mutate(data);
+  };
 
-  }, [params.id]); // Depende de params.id para re-executar se o ID mudar
-
-  // Adiciona um estado de carregamento inicial
-  if (isLoading) {
+  if (isLoadingTicket) {
     return (
-      <div className="container mx-auto py-8 text-center">
-        <p>Carregando detalhes do ticket...</p>
-        {/* Pode adicionar um spinner aqui */}
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
       </div>
     );
   }
 
-  // Se não está carregando e o ticket não foi encontrado (após a busca no useEffect)
   if (!ticket) {
-     // O notFound() já deve ter sido chamado no useEffect se o ID era inválido ou não foi encontrado.
-     // Pode retornar null ou um placeholder se preferir, mas notFound é mais semântico.
-    return null; 
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-gray-500">Ticket não encontrado</p>
+      </div>
+    );
   }
-
-  const handleStatusChange = (ticketId: number, newStatus: 'Aberto' | 'Em Andamento' | 'Resolvido' | 'Fechado') => {
-    // Em um ambiente real, isso seria uma chamada de API
-    setTicket(prev => {
-      if (!prev) return null;
-      return { ...prev, status: newStatus, updated_at: new Date().toISOString() };
-    });
-  };
-
-  const handleSendMessage = async (ticketId: number, message: string) => {
-    try {
-      setIsLoading(true);
-      
-      // Simular atraso para demonstração
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Criar nova mensagem simulada
-      const newMessage: TicketMessage = {
-        id: Date.now(),
-        ticket_id: ticketId,
-        user_id: 1, // ID do usuário atual (mockado)
-        message,
-        created_at: new Date().toISOString(),
-      };
-      
-      setMessages(prev => [...prev, newMessage]);
-    } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="container mx-auto py-8">
-      <div className="mb-6">
-        <Link href="/tickets" passHref>
-          <Button variant="outline" className="mb-4">
-            <ArrowLeftIcon className="mr-2 h-4 w-4" />
-            Voltar para Tickets
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => router.push('/tickets')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            Voltar para tickets
           </Button>
-        </Link>
-        <h1 className="text-2xl font-bold">Ticket #{ticket.id}</h1>
-      </div>
+        </div>
 
-      <TicketDetail
-        ticket={ticket}
-        messages={messages}
-        onSendMessage={handleSendMessage}
-        onStatusChange={handleStatusChange}
-        isLoading={isLoading}
-      />
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{ticket.title}</h1>
+                <p className="text-sm text-gray-500">
+                  Criado {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true, locale: ptBR })}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Badge className={priorityColors[ticket.priority]}>
+                  {ticket.priority}
+                </Badge>
+                <Badge className={statusColors[ticket.status]}>
+                  {ticket.status}
+                </Badge>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700 whitespace-pre-wrap">{ticket.description}</p>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Mensagens</h2>
+          <div className="space-y-4">
+            {ticket.messages?.map((message: TicketMessage) => (
+              <Card key={message.id}>
+                <CardContent className="py-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium">{message.user?.name || 'Usuário'}</p>
+                      <p className="text-sm text-gray-500">
+                        {formatDistanceToNow(new Date(message.created_at), { addSuffix: true, locale: ptBR })}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-gray-700">{message.message}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="message"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Digite sua mensagem..."
+                        className="min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  disabled={sendMessageMutation.isPending || !form.watch('message').trim()}
+                >
+                  {sendMessageMutation.isPending ? 'Enviando...' : 'Enviar Mensagem'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
+      </div>
     </div>
   );
 } 

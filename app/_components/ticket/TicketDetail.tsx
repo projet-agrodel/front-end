@@ -1,43 +1,49 @@
+'use client';
+
 import React, { useState } from 'react';
+import { Card, CardContent, CardHeader } from '@/app/_components/ui/card';
+import { Badge } from '@/app/_components/ui/badge';
 import { Button } from '@/app/_components/ui/button';
 import { Textarea } from '@/app/_components/ui/textarea';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/app/_components/ui/card';
-import { Badge } from '@/app/_components/ui/badge';
+import { Select } from '@/app/_components/ui/select';
 import { Ticket, TicketMessage } from '@/services/interfaces/interfaces';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
-const priorityColors = {
-  Baixa: 'bg-blue-100 text-blue-800',
-  Média: 'bg-yellow-100 text-yellow-800',
-  Alta: 'bg-orange-100 text-orange-800',
-  Urgente: 'bg-red-100 text-red-800',
-};
-
-const statusColors = {
-  Aberto: 'bg-green-100 text-green-800',
-  'Em Andamento': 'bg-purple-100 text-purple-800',
-  Resolvido: 'bg-teal-100 text-teal-800',
-  Fechado: 'bg-gray-100 text-gray-800',
-};
+import { TicketStatus, TicketPriority } from '@/services/types/types';
 
 interface TicketDetailProps {
   ticket: Ticket;
   messages: TicketMessage[];
   onSendMessage: (ticketId: number, message: string) => void;
-  onStatusChange?: (ticketId: number, newStatus: 'Aberto' | 'Em Andamento' | 'Resolvido' | 'Fechado') => void;
-  isLoading?: boolean;
+  onStatusChange: (ticketId: number, newStatus: TicketStatus) => void;
+  onPriorityChange: (ticketId: number, newPriority: TicketPriority) => void;
+  isLoading: boolean;
 }
 
-export function TicketDetail({ 
-  ticket, 
-  messages, 
-  onSendMessage, 
+const statusOptions = [
+  { value: 'Aberto', label: 'Aberto' },
+  { value: 'Em Andamento', label: 'Em Andamento' },
+  { value: 'Resolvido', label: 'Resolvido' },
+  { value: 'Fechado', label: 'Fechado' },
+];
+
+const priorityOptions = [
+  { value: 'Baixa', label: 'Baixa' },
+  { value: 'Média', label: 'Média' },
+  { value: 'Alta', label: 'Alta' },
+  { value: 'Urgente', label: 'Urgente' },
+];
+
+export function TicketDetail({
+  ticket,
+  messages,
+  onSendMessage,
   onStatusChange,
-  isLoading 
+  onPriorityChange,
+  isLoading
 }: TicketDetailProps) {
   const [newMessage, setNewMessage] = useState('');
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim()) {
@@ -46,128 +52,85 @@ export function TicketDetail({
     }
   };
 
-  const priorityClass = priorityColors[ticket.priority || 'Média'];
-  const statusClass = statusColors[ticket.status || 'Aberto'];
-
-  const openedDateFormatted = ticket.created_at
-    ? format(new Date(ticket.created_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
-    : 'Data indisponível';
-
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader>
           <div className="flex justify-between items-start">
-            <CardTitle>{ticket.title}</CardTitle>
-            <div className="flex gap-2">
-              <Badge className={priorityClass}>{ticket.priority || 'Média'}</Badge>
-              <Badge className={statusClass}>{ticket.status || 'Aberto'}</Badge>
+            <div>
+              <h2 className="text-2xl font-bold">{ticket.title}</h2>
+              <p className="text-gray-500">
+                Criado {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true, locale: ptBR })}
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <Select
+                  value={ticket.status}
+                  onValueChange={(value: string) => onStatusChange(ticket.id, value as TicketStatus)}
+                  disabled={isLoading}
+                >
+                  {statusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Prioridade</label>
+                <Select
+                  value={ticket.priority}
+                  onValueChange={(value) => onPriorityChange(ticket.id, value as TicketPriority)}
+                  disabled={isLoading}
+                >
+                  {priorityOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
           </div>
-          <p className="text-sm text-gray-500">
-            Aberto em {openedDateFormatted}
-          </p>
         </CardHeader>
         <CardContent>
-          <p className="whitespace-pre-line">{ticket.description}</p>
+          <p className="text-gray-700">{ticket.description}</p>
         </CardContent>
-        {onStatusChange && (
-          <CardFooter className="flex gap-2 justify-end border-t pt-4">
-            {ticket.status !== 'Aberto' && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => onStatusChange(ticket.id, 'Aberto')}
-              >
-                Reabrir
-              </Button>
-            )}
-            {ticket.status !== 'Em Andamento' && ticket.status !== 'Resolvido' && ticket.status !== 'Fechado' && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => onStatusChange(ticket.id, 'Em Andamento')}
-              >
-                Em Andamento
-              </Button>
-            )}
-            {ticket.status !== 'Resolvido' && ticket.status !== 'Fechado' && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => onStatusChange(ticket.id, 'Resolvido')}
-              >
-                Resolver
-              </Button>
-            )}
-            {ticket.status !== 'Fechado' && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => onStatusChange(ticket.id, 'Fechado')}
-              >
-                Fechar
-              </Button>
-            )}
-          </CardFooter>
-        )}
       </Card>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">Histórico de Mensagens</h3>
+        <h3 className="text-xl font-semibold">Mensagens</h3>
         <div className="space-y-4">
-          {messages.length > 0 ? (
-            messages.map((msg) => {
-              const messageTimeAgo = msg.created_at
-                ? formatDistanceToNow(new Date(msg.created_at), { addSuffix: true, locale: ptBR })
-                : 'Data indisponível';
-              
-              return (
-                <div 
-                  key={msg.id} 
-                  className="p-4 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <p className="font-medium">{msg.user_id ? `Usuário #${msg.user_id}` : 'Suporte'}</p>
+          {messages.map((message) => (
+            <Card key={message.id}>
+              <CardContent className="py-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium">{message.user?.name || 'Usuário'}</p>
                     <p className="text-sm text-gray-500">
-                      {messageTimeAgo}
+                      {formatDistanceToNow(new Date(message.created_at), { addSuffix: true, locale: ptBR })}
                     </p>
                   </div>
-                  <p className="whitespace-pre-line">{msg.message}</p>
                 </div>
-              );
-            })
-          ) : (
-            <div className="text-center py-8 border border-dashed rounded-lg">
-              <p className="text-gray-500">Nenhuma mensagem neste ticket</p>
-            </div>
-          )}
+                <p className="mt-2">{message.message}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {ticket.status !== 'Fechado' && (
-          <form onSubmit={handleSubmit} className="mt-6">
-            <Textarea
-              placeholder="Digite sua mensagem aqui..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              rows={4}
-              className="mb-2"
-              required
-            />
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isLoading || !newMessage.trim()}>
-                {isLoading ? (
-                  <>
-                    <span className="animate-spin mr-2">⏳</span>
-                    Enviando...
-                  </>
-                ) : (
-                  'Enviar Mensagem'
-                )}
-              </Button>
-            </div>
-          </form>
-        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Textarea
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Digite sua mensagem..."
+            className="min-h-[100px]"
+          />
+          <Button type="submit" disabled={isLoading || !newMessage.trim()}>
+            Enviar Mensagem
+          </Button>
+        </form>
       </div>
     </div>
   );

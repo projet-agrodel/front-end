@@ -11,6 +11,8 @@ import { Ticket } from '@/services/interfaces/interfaces';
 import { MessageSquare, Search, Filter, Clock, CheckCircle, AlertCircle, XCircle, LucideProps } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { TicketPriority, TicketStatus } from '@/services/types/types';
+import { useQuery } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 
 const mockTickets = [
   {
@@ -122,33 +124,24 @@ const PriorityBadge = ({ priority }: { priority: Ticket['priority'] }) => {
 };
 
 export default function AdminTicketsPage() {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const session = useSession()
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<Ticket['status'] | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<Ticket['priority'] | 'all'>('all');
   const router = useRouter();
 
-  // Simulação de dados (substituir por chamada API real)
-  useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        // Simular chamada API
-        await new Promise(resolve => setTimeout(resolve, 1000));
-    
-        setTickets(mockTickets);
-      } catch (error) {
-        console.error('Erro ao buscar tickets:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const { data: tickets, isLoading } = useQuery<Ticket[]>({
+    queryKey: ['tickets_admin'],
+    queryFn: async () => {
+      const response = await fetch(`http://localhost:5000/api/tickets`);
+      if (!response.ok) throw new Error('Erro ao carregar ticket');
+      return response.json();
+    },
+  });
 
-    fetchTickets();
-  }, []);
 
   // Filtrar tickets
-  const filteredTickets = tickets.filter(ticket => {
+  const filteredTickets = tickets?.filter(ticket => {
     const matchesSearch = 
       ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket?.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -171,7 +164,7 @@ export default function AdminTicketsPage() {
     });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
@@ -261,7 +254,7 @@ export default function AdminTicketsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredTickets.map((ticket) => (
+              {filteredTickets?.map((ticket) => (
                 <motion.tr
                   key={ticket.id}
                   initial={{ opacity: 0 }}
@@ -294,7 +287,7 @@ export default function AdminTicketsPage() {
       </div>
 
       {/* Mensagem quando não há tickets */}
-      {filteredTickets.length === 0 && (
+      {filteredTickets?.length === 0 && (
         <div className="text-center py-12">
           <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">Nenhum ticket encontrado</h3>

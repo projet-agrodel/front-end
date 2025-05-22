@@ -60,7 +60,7 @@ const RegisterPage = () => {
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      const response = await fetch(`${API_URL}/api/users`, {
+      const response = await fetch(`${API_URL}/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -69,7 +69,7 @@ const RegisterPage = () => {
           name: data.name,
           email: data.email,
           password: data.password,
-          type: 'client'
+          type: 'admin'
         }),
       });
 

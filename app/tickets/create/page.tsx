@@ -1,62 +1,175 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { TicketForm } from '@/app/_components/ticket/TicketForm';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/app/_components/ui/card';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button } from '@/app/_components/ui/button';
+import { Card, CardContent, CardHeader } from '@/app/_components/ui/card';
+import { Input } from '@/app/_components/ui/input';
+import { Textarea } from '@/app/_components/ui/textarea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/app/_components/ui/select';
+import { ArrowLeftIcon } from '@/app/_components/icons/arrow-left';
+import { toast } from 'sonner';
+import { TicketPriority } from '@/services/types/types';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/app/_components/ui/form';
+import { useSession } from 'next-auth/react';
 
-export default function CreateTicketPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const ticketFormSchema = z.object({
+  title: z.string().min(3, 'O título deve ter pelo menos 3 caracteres'),
+  description: z.string().min(10, 'A descrição deve ter pelo menos 10 caracteres'),
+  priority: z.enum(['Baixa', 'Média', 'Alta', 'Urgente'] as const),
+});
+
+type TicketFormValues = z.infer<typeof ticketFormSchema>;
+
+export default function NewTicketPage() {
+  const { data: session } = useSession()
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const handleSubmit = async (data: {
-    title: string;
-    description: string;
-    priority: 'Baixa' | 'Média' | 'Alta' | 'Urgente';
-  }) => {
-    try {
-      setIsSubmitting(true);
-      
-      // Aqui seria a implementação da API para criar o ticket
-      // const response = await fetch('/api/tickets', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify(data),
-      // });
-      
-      // if (!response.ok) throw new Error('Falha ao criar ticket');
-      
-      // Simular um atraso para demonstração
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Redirecionar para a página de tickets após sucesso
+  const form = useForm<TicketFormValues>({
+    resolver: zodResolver(ticketFormSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      priority: 'Média',
+    },
+  });
+
+  const createTicketMutation = useMutation({
+    mutationFn: async (data: TicketFormValues) => {
+      const response = await fetch('http://localhost:5000/api/tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: session?.user.id, ...data }),
+      });
+
+      if (!response.ok) throw new Error('Erro ao criar ticket');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userTickets'] });
+      toast('Ticket criado', {
+        description: 'Seu ticket foi criado com sucesso.',
+      });
       router.push('/tickets');
-      router.refresh();
-    } catch (error) {
-      console.error('Erro ao criar ticket:', error);
-      // Implementar notificação de erro aqui
-    } finally {
-      setIsSubmitting(false);
-    }
+    },
+    onError: () => {
+      toast('Erro', {
+        description: 'Não foi possível criar o ticket.',
+      });
+    },
+  });
+
+  const onSubmit = (data: TicketFormValues) => {
+    createTicketMutation.mutate(data);
   };
-  
+
   return (
-    <div className="container mx-auto max-w-3xl py-8">
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="text-2xl">Criar Novo Ticket</CardTitle>
-          <CardDescription>
-            Preencha as informações abaixo para criar um novo ticket de suporte.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-      
-      <TicketForm 
-        onSubmit={handleSubmit}
-        isLoading={isSubmitting}
-      />
+    <div className="container mx-auto py-8">
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            Voltar
+          </Button>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <h1 className="text-2xl font-bold text-gray-900">Criar Novo Ticket</h1>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Título</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Digite o título do ticket" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descrição</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Descreva detalhadamente o seu problema ou solicitação"
+                          className="min-h-[150px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prioridade</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a prioridade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Baixa">Baixa</SelectItem>
+                          <SelectItem value="Média">Média</SelectItem>
+                          <SelectItem value="Alta">Alta</SelectItem>
+                          <SelectItem value="Urgente">Urgente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex justify-end gap-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.back()}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createTicketMutation.isPending}
+                  >
+                    {createTicketMutation.isPending ? 'Criando...' : 'Criar Ticket'}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 } 
