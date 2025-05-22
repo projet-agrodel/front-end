@@ -4,6 +4,14 @@ import React from 'react';
 import DateRangeFilter from './_components/DateRangeFilter';
 import AnalyticsCard, { AnalyticsCardProps } from './_components/AnalyticsCard';
 import SalesByCategoryChart from './_components/SalesByCategoryChart';
+// Importar novos componentes de detalhe
+import TotalPedidosDetalhes from './_components/TotalPedidosDetalhes';
+import NovosClientesDetalhes from './_components/NovosClientesDetalhes';
+import VisitantesUnicosDetalhes from './_components/VisitantesUnicosDetalhes';
+import TaxaConversaoDetalhes from './_components/TaxaConversaoDetalhes';
+import TicketMedioDetalhes from './_components/TicketMedioDetalhes';
+import AtividadeRecenteLog from './_components/AtividadeRecenteLog';
+
 import { 
   PieChart, Activity, Package, Users, 
   TrendingUp, TrendingDown, CircleDollarSign, BarChart3,
@@ -18,12 +26,13 @@ import {
 import { motion } from 'framer-motion';
 
 // Componentes placeholder para o conteúdo dos cards (a serem desenvolvidos)
-const PlaceholderContent = ({ text }: { text: string }) => (
-  <div className="text-center text-gray-400 py-8 text-sm">
-    <p>{text}</p>
-    <p>(Em desenvolvimento)</p>
-  </div>
-);
+// Removido PlaceholderContent pois agora usaremos componentes específicos
+// const PlaceholderContent = ({ text }: { text: string }) => (
+//   <div className="text-center text-gray-400 py-8 text-sm">
+//     <p>{text}</p>
+//     <p>(Em desenvolvimento)</p>
+//   </div>
+// );
 
 // Indicador de tendência com seta para cima ou para baixo
 const TrendIndicator = ({ value, direction, colorClass }: { value: string, direction: 'up' | 'down' | 'neutral', colorClass: string }) => {
@@ -125,16 +134,16 @@ export default function AdvancedAnalyticsPage() {
     {
       title: "Total Pedidos",
       icon: <ShoppingCart size={20} />,
-      variant: "secondary", // Alterado para secondary
+      variant: "secondary",
       summary: { value: "34.760", subtitle: "Pedidos vs último mês", trend: "+12,4%", trendDirection: "up" },
       chart: <MiniBarChart data={weekdayData} color="#FFFFFF" />,
-      modalContent: <PlaceholderContent text="Detalhamento dos pedidos" />,
+      modalContent: <TotalPedidosDetalhes />,
       modalDescription: "Análise detalhada dos pedidos no período."
     },
     {
-      title: "Produtos Vendidos", // Renomeado para melhor clareza
+      title: "Produtos Vendidos",
       icon: <PackageSearch size={20} />,
-      variant: "success", // Alterado para success
+      variant: "success",
       summary: { value: "9.829", subtitle: "Itens vendidos", trend: "+5,34%", trendDirection: "up" },
       chart: <MiniDonutChart percentages={categoryPercentages} colors={['#a7f3d0', '#6ee7b7', '#34d399', '#10b981', '#059669']} />,
       modalContent: <SalesByCategoryChart />,
@@ -143,20 +152,19 @@ export default function AdvancedAnalyticsPage() {
     {
       title: "Novos Clientes",
       icon: <UsersRound size={20} />,
-      variant: "warning", // Usando a nova variante
+      variant: "warning",
       summary: { value: "1.254", subtitle: "Clientes vs último mês", trend: "+8,2%", trendDirection: "up" },
       chart: <MiniProgressCircle percentage={75} color="#854d0e" bgColor="#fde68a" />,
-      modalContent: <PlaceholderContent text="Análise de novos clientes" />,
+      modalContent: <NovosClientesDetalhes />,
       modalDescription: "Análise de aquisição de novos clientes."
     },
-    // Card Visitantes permanece default, pois o vermelho é danger
     {
       title: "Visitantes Únicos",
       icon: <Users size={20} />,
-      variant: "default", // Mantido como default, mas o CardValue precisa saber para o TrendIndicator
+      variant: "default",
       summary: { value: "14.987", subtitle: "Usuários vs último mês", trend: "-2,08%", trendDirection: "down" },
       chart: <MiniProgressCircle percentage={62} color="#ef4444" />,
-      modalContent: <PlaceholderContent text="Análise de visitantes" />,
+      modalContent: <VisitantesUnicosDetalhes />,
       modalDescription: "Análise detalhada de visitantes e comportamento."
     },
      {
@@ -165,7 +173,7 @@ export default function AdvancedAnalyticsPage() {
       variant: "default",
       summary: { value: "4,8%", subtitle: "Conversão vs último mês", trend: "+0.5%", trendDirection: "up" },
       chart: <MiniSparkline data={[2, 3, 5, 4, 6, 7, 8]} color="#4f46e5" height={40} width={80}/>,
-      modalContent: <PlaceholderContent text="Análise da Taxa de Conversão" />,
+      modalContent: <TaxaConversaoDetalhes />,
       modalDescription: "Detalhes sobre a taxa de conversão de visitantes para clientes."
     },
     {
@@ -174,16 +182,15 @@ export default function AdvancedAnalyticsPage() {
       variant: "default",
       summary: { value: "R$ 125,30", subtitle: "Ticket vs último mês", trend: "-1,2%", trendDirection: "down" },
       chart: <MiniBarChart data={[100,120,110,130,125,115,128]} color="#8b5cf6"/>,
-      modalContent: <PlaceholderContent text="Análise do Ticket Médio" />,
+      modalContent: <TicketMedioDetalhes />,
       modalDescription: "Análise do valor médio por pedido."
     },
     {
       title: "Atividade Recente",
       icon: <Activity size={20} />,
       variant: "default",
-      summary: { value: "27 min atrás", subtitle: "Última venda realizada", trend: "", trendDirection: "neutral" }, // Sem trend explícito
-      // Sem chart para este
-      modalContent: <PlaceholderContent text="Log de atividades recentes" />,
+      summary: { value: "27 min atrás", subtitle: "Última venda realizada", trend: "", trendDirection: "neutral" },
+      modalContent: <AtividadeRecenteLog />,
       modalDescription: "Visualização das últimas atividades na plataforma."
     }
   ];
