@@ -3,4 +3,4 @@ export const PROTECTED_ROUTES = [
     '/tickets',
     '/carrinho',
     '/profile'
-]
+] as const
