@@ -48,7 +48,7 @@ const LoginPage = () => {
       });
 
       if (result?.error) {
-        setError(result.error);
+        setError('Erro na autenticação, por favor tente novamente.');
         return;
       }
 

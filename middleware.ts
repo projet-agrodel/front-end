@@ -1,26 +1,30 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
+import { PROTECTED_ROUTES } from './services/constants';
 
-export default withAuth(
+ export default withAuth(
   function middleware(req) {
-    const token = req.nextauth.token;
-    const isAdminRoute = req.nextUrl.pathname.startsWith('/admin');
-    const isAdmin = token?.role === 'admin';
+     const token = req.nextauth.token;
 
-    // Se tentar acessar rota admin sem ser admin
-    if (isAdminRoute && !isAdmin) {
-      // Redireciona para a página inicial ou uma página de "Não Autorizado"
-      return NextResponse.redirect(new URL('/', req.url)); 
-    }
+     const isProtectedRoute = PROTECTED_ROUTES.some((route) =>
+        req.nextUrl.pathname.startsWith(route)
+     );
 
-    return NextResponse.next();
+     if (!token && isProtectedRoute) {
+        return NextResponse.redirect(new URL('/auth/login', req.url));
+     }
+
+     // ToDo mudar role
+     if (req.nextUrl.pathname.startsWith("/admin") && token?.role !== 'admin') {
+        return NextResponse.redirect(new URL('/', req.url));
+     }
+
+     return NextResponse.next();
   },
   {
-    callbacks: {
-      authorized: ({ token }) => {
-        return !!token; // Garante que o usuário está logado para todas as rotas no matcher.
-      }
-    },
+     callbacks: {
+        authorized: ({ token }) => !!token,
+     },
   }
 );
 

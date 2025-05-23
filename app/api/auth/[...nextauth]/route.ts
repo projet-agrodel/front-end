@@ -3,7 +3,7 @@ import NextAuth from 'next-auth';
 import { AuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -28,7 +28,7 @@ export const authOptions: AuthOptions = {
 
           const data = await response.json();
 
-          if (!response.ok || !data || !data.access_token) {
+          if (!response.ok || !data) {
             throw new Error(data.message || 'Credenciais inválidas ou token não retornado');
           }
 

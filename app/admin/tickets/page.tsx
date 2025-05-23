@@ -260,7 +260,9 @@ export default function AdminTicketsPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => {/* Implementar visualização detalhada */}}
+                  onClick={() => {
+                     router.replace(`/admin/tickets/${ticket.id}`)
+                  }}
                 >
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{ticket.title}</div>
