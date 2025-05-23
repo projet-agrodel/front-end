@@ -126,8 +126,8 @@ const PriorityBadge = ({ priority }: { priority: Ticket['priority'] }) => {
 export default function AdminTicketsPage() {
   const session = useSession()
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<Ticket['status'] | 'all'>('all');
-  const [priorityFilter, setPriorityFilter] = useState<Ticket['priority'] | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
+  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
   const router = useRouter();
 
   const { data: tickets, isLoading } = useQuery<Ticket[]>({
@@ -171,7 +171,7 @@ export default function AdminTicketsPage() {
       </div>
     );
   }
-
+  
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
@@ -204,12 +204,12 @@ export default function AdminTicketsPage() {
           <select
             className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 sm:text-sm"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as Ticket['status'] | 'all')}
+            onChange={(e) => setStatusFilter(e.target.value as TicketStatus | 'all')}
           >
             <option value="all">Todos os Status</option>
-            <option value="open">Abertos</option>
-            <option value="in_progress">Em Andamento</option>
-            <option value="closed">Fechados</option>
+            <option value="Aberto">Abertos</option>
+            <option value="Em Progresso">Em Andamento</option>
+            <option value="Fechado">Fechado</option>
           </select>
         </div>
 
@@ -223,9 +223,9 @@ export default function AdminTicketsPage() {
             onChange={(e) => setPriorityFilter(e.target.value as Ticket['priority'] | 'all')}
           >
             <option value="all">Todas as Prioridades</option>
-            <option value="low">Baixa</option>
-            <option value="medium">Média</option>
-            <option value="high">Alta</option>
+            <option value="Baixa">Baixa</option>
+            <option value="Média">Média</option>
+            <option value="Alta">Alta</option>
           </select>
         </div>
       </div>

@@ -8,7 +8,7 @@ import { Button } from '@/app/_components/ui/button';
 import { ArrowLeftIcon } from '@/app/_components/icons/arrow-left';
 import { TicketStatus, TicketPriority } from '@/services/types/types';
 import { toast } from 'sonner';
-import { Ticket } from '@/services/interfaces/interfaces';
+import { Ticket, User } from '@/services/interfaces/interfaces';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/_components/ui/card';
 import { Badge } from '@/app/_components/ui/badge';
 import { Skeleton } from '@/app/_components/ui/skeleton';
@@ -46,40 +46,31 @@ export default function AdminTicketPage() {
     },
   });
 
-  // Mutation para atualizar status
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ status }: { status: TicketStatus }) => {
-      const response = await fetch(`http://localhost:5000/api/tickets/${ticketId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      if (!response.ok) throw new Error('Erro ao atualizar status');
+  // Buscar dados dos usuários
+  const { data: users } = useQuery<User[]>({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const response = await fetch('http://localhost:5000/api/users');
+      if (!response.ok) throw new Error('Erro ao carregar usuários');
       return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
-      toast.success('Status atualizado com sucesso');
-    },
-    onError: () => {
-      toast.error('Erro ao atualizar status');
     },
   });
 
+
   // Mutation para atualizar prioridade
-  const updatePriorityMutation = useMutation({
-    mutationFn: async ({ priority }: { priority: TicketPriority }) => {
-      const response = await fetch(`http://localhost:5000/api/tickets/${ticketId}/priority`, {
+  const updateStatusticket = useMutation({
+    mutationFn: async ({ priority, status }: { priority?: TicketPriority, status?: TicketStatus }) => {
+      const response = await fetch(`http://localhost:5000/api/tickets/${ticketId}/update-status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priority }),
+        body: JSON.stringify({ priority, status }),
       });
       if (!response.ok) throw new Error('Erro ao atualizar prioridade');
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
-      toast.success('Prioridade atualizada com sucesso');
+      toast.success('Atualização feita com sucesso');
     },
     onError: () => {
       toast.error('Erro ao atualizar prioridade');
@@ -92,7 +83,7 @@ export default function AdminTicketPage() {
       const response = await fetch(`http://localhost:5000/api/tickets/${ticketId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: message, user_id: session?.user.id  }),
+        body: JSON.stringify({ message: message, user_id: session?.user.id }),
       });
       if (!response.ok) throw new Error('Erro ao enviar mensagem');
       return response.json();
@@ -107,16 +98,25 @@ export default function AdminTicketPage() {
   });
 
   const handleStatusChange = (ticketId: number, newStatus: TicketStatus) => {
-    updateStatusMutation.mutate({ status: newStatus });
+    updateStatusticket.mutate({ status: newStatus });
   };
 
   const handlePriorityChange = (ticketId: number, newPriority: TicketPriority) => {
-    updatePriorityMutation.mutate({ priority: newPriority });
+    updateStatusticket.mutate({ priority: newPriority });
   };
 
   const handleSendMessage = (ticketId: number, message: string) => {
     sendMessageMutation.mutate(message);
   };
+
+  // Preparar mensagens com informações dos usuários
+  const messagesWithUsers = ticket?.messages?.map(message => {
+    const user = users?.find(u => u.id === message.user_id);
+    return {
+      ...message,
+      user: user || message.user,
+    };
+  });
 
   if (isLoadingTicket) {
     return (
@@ -146,6 +146,11 @@ export default function AdminTicketPage() {
       </div>
     );
   }
+
+  const ticketWithUpdatedMessages = {
+    ...ticket,
+    messages: messagesWithUsers,
+  };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -183,14 +188,15 @@ export default function AdminTicketPage() {
       </Card>
 
       <TicketDetail
-        ticket={ticket}
-        messages={ticket.messages || []}
+        ticket={ticketWithUpdatedMessages}
+        messages={ticketWithUpdatedMessages.messages || []}
+        isPageAdmin={true}
         onSendMessage={handleSendMessage}
         onStatusChange={handleStatusChange}
         onPriorityChange={handlePriorityChange}
         isLoading={
-          updateStatusMutation.isPending ||
-          updatePriorityMutation.isPending ||
+          updateStatusticket.isPending ||
+          updateStatusticket.isPending ||
           sendMessageMutation.isPending
         }
       />
