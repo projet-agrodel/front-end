@@ -9,15 +9,13 @@ import {
     updateAdminProduct, 
     deleteAdminProduct,
     AdminProduct,
-    CreateAdminProductPayload,
-    UpdateAdminProductPayload,
     GetAdminProductsParams,
 } from '../../../services/adminProductService';
 import { getAuthTokenForAdmin } from '../../../utils/authAdmin';
 
 // Importar componentes refatorados
-import { ConfirmationModal, ConfirmationModalProps } from './_components/ConfirmationModal';
-import { ProductForm, ProductFormProps, DisplayProduct as FormDisplayProduct } from './_components/ProductForm';
+import { ConfirmationModal } from './_components/ConfirmationModal';
+import { ProductForm, DisplayProduct as FormDisplayProduct } from './_components/ProductForm';
 
 // Interface DisplayProduct para a tabela e estado da página
 export interface PageDisplayProduct {
@@ -176,7 +174,7 @@ export default function AdminProductsPage() {
     if (isLoading && products.length === 0) {
         return (
             <div className="flex justify-center items-center h-[calc(100vh-8rem)]">
-                <Loader2 className="h-12 w-12 animate-spin text-indigo-600" />
+                <Loader2 className="h-12 w-12 animate-spin text-green-600" />
                 <p className="ml-4 text-lg text-gray-600">Carregando produtos...</p>
             </div>
         );
@@ -213,7 +211,7 @@ export default function AdminProductsPage() {
                             placeholder="Pesquisar produtos por nome, descrição ou categoria..."
                             value={searchTerm}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                            className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow shadow-sm hover:shadow-md text-sm"
+                            className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow shadow-sm hover:shadow-md text-sm"
                         />
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     </div>
@@ -221,7 +219,7 @@ export default function AdminProductsPage() {
 
                 {isLoading && products.length > 0 && (
                     <div className="flex justify-center items-center py-4">
-                        <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+                        <Loader2 className="h-6 w-6 animate-spin text-green-600" />
                         <p className="ml-2 text-gray-500">Atualizando lista...</p>
                     </div>
                 )}

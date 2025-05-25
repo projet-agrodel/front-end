@@ -35,7 +35,7 @@ export interface ProductFormProps {
     updateProductFn: (id: string, payload: UpdateAdminProductPayload, token: string) => Promise<AdminProduct>;
 }
 
-const inputBaseClass = "block w-full px-4 py-3 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg shadow-sm transition-all duration-150 ease-in-out focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none";
+const inputBaseClass = "block w-full px-4 py-3 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg shadow-sm transition-all duration-150 ease-in-out focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none";
 const labelBaseClass = "block text-sm font-medium text-gray-700 mb-1.5";
 
 export function ProductForm({ 
@@ -197,16 +197,16 @@ export function ProductForm({
 
     return (
         <motion.div 
-            className="fixed inset-0 z-50 flex justify-center items-center p-4 backdrop-blur-md bg-black bg-opacity-60"
+            className="fixed inset-0 z-50 flex justify-center items-center p-4 backdrop-blur-md bg-transparent bg-opacity-60"
             variants={overlayVariants} initial="hidden" animate="visible" exit="exit"
             onClick={onClose} 
         >
             <motion.div
-                className="bg-gradient-to-br from-gray-50 to-slate-100 p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-2xl transform transition-all max-h-[90vh] flex flex-col"
+                className="bg-gradient-to-br from-white-50 to-gray-100 p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-2xl transform transition-all max-h-[90vh] flex flex-col"
                 variants={modalVariants}
                 onClick={(e) => e.stopPropagation()} 
             >
-                <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-purple-600 mb-6 sm:mb-8 text-center flex-shrink-0">
+                <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-green-700 mb-6 sm:mb-8 text-center flex-shrink-0">
                     {initialData ? 'Editar Produto' : 'Adicionar Novo Produto'}
                 </h2>
                 
@@ -287,7 +287,7 @@ export function ProductForm({
                             </select>
                         </div>
                         <div className="flex items-center self-end pb-1 md:mt-0 mt-2">
-                            <input type="checkbox" name="isPromotion" id="isPromotion" checked={!!formData.isPromotion} onChange={handleChange} className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer shadow-sm" disabled={isSubmitting} />
+                            <input type="checkbox" name="isPromotion" id="isPromotion" checked={!!formData.isPromotion} onChange={handleChange} className="h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer shadow-sm" disabled={isSubmitting} />
                             <label htmlFor="isPromotion" className="ml-2.5 block text-sm font-medium text-gray-700 cursor-pointer">Em Promoção?</label>
                         </div>
                     </div>
@@ -299,7 +299,7 @@ export function ProductForm({
                                 animate={{ opacity: 1, height: 'auto', marginTop: '1.25rem', marginBottom: '1.25rem' }}
                                 exit={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
                                 transition={{duration: 0.3, ease: "easeInOut"}}
-                                className="overflow-hidden"
+                                className="overflow-hidden p-1"
                             >
                                 <label htmlFor="originalPrice" className={labelBaseClass}>Preço Original (R$) <span className="text-red-500">*</span></label>
                                 <input type="number" name="originalPrice" id="originalPrice" value={formData.originalPrice ?? ''} onChange={handleChange} required={formData.isPromotion} min="0.01" step="0.01" className={inputBaseClass} disabled={isSubmitting} />
@@ -312,7 +312,7 @@ export function ProductForm({
                     <motion.button 
                         type="button" 
                         onClick={onClose} 
-                        className="px-7 py-3 bg-gray-200 text-gray-800 rounded-lg text-sm font-semibold hover:bg-gray-300/80 transition-all duration-150 ease-in-out shadow-sm disabled:opacity-60"
+                        className="px-7 py-3 bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-all duration-150 ease-in-out shadow-sm disabled:opacity-60"
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.98 }}
                         disabled={isSubmitting}
@@ -322,7 +322,7 @@ export function ProductForm({
                     <motion.button 
                         type="submit" // Alterado para submit, para que o form onSubmit seja acionado
                         onClick={handleSubmit} // Pode manter se quiser forçar o handle, mas o type submit já faz
-                        className="px-7 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-sm font-semibold hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-150 ease-in-out shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-wait"
+                        className="px-7 py-3 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-lg text-sm font-semibold hover:from-green-600 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-150 ease-in-out shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-wait"
                         whileHover={{ scale: 1.03, y: -1 }}
                         whileTap={{ scale: 0.98, y: 0 }}
                         disabled={isSubmitting || !!successMessage} // Desabilitar também se mensagem de sucesso estiver visível
