@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import DateRangeFilter from './_components/DateRangeFilter';
 import AnalyticsCard, { AnalyticsCardProps } from './_components/AnalyticsCard';
 import SalesByCategoryChart from './_components/SalesByCategoryChart';
 // Importar novos componentes de detalhe
+import TotalVendasDetalhes from './_components/TotalVendasDetalhes';
 import TotalPedidosDetalhes from './_components/TotalPedidosDetalhes';
 import NovosClientesDetalhes from './_components/NovosClientesDetalhes';
 import VisitantesUnicosDetalhes from './_components/VisitantesUnicosDetalhes';
@@ -13,8 +14,8 @@ import TicketMedioDetalhes from './_components/TicketMedioDetalhes';
 import AtividadeRecenteLog from './_components/AtividadeRecenteLog';
 
 import { 
-  PieChart, Activity, Package, Users, 
-  TrendingUp, TrendingDown, CircleDollarSign, BarChart3,
+  /* PieChart, */ Activity, /* Package, */ Users, 
+  TrendingUp, TrendingDown, CircleDollarSign, /* BarChart3, */
   CreditCard, ShoppingCart, UsersRound, PackageSearch // Novos ícones
 } from 'lucide-react';
 import {
@@ -25,16 +26,9 @@ import {
 } from './_components/MiniCharts';
 import { motion } from 'framer-motion';
 
-// Componentes placeholder para o conteúdo dos cards (a serem desenvolvidos)
-// Removido PlaceholderContent pois agora usaremos componentes específicos
-// const PlaceholderContent = ({ text }: { text: string }) => (
-//   <div className="text-center text-gray-400 py-8 text-sm">
-//     <p>{text}</p>
-//     <p>(Em desenvolvimento)</p>
-//   </div>
-// );
+import { getTotalSales, getTotalOrders, TotalSalesData, TotalOrdersData } from '@/services/adminAnalyticsService'; // Importar serviços e tipos
+import { useSession } from 'next-auth/react';
 
-// Indicador de tendência com seta para cima ou para baixo
 const TrendIndicator = ({ value, direction, colorClass }: { value: string, direction: 'up' | 'down' | 'neutral', colorClass: string }) => {
   const getIcon = () => {
     if (direction === 'up') return <TrendingUp size={14} className={colorClass} />;
@@ -118,6 +112,46 @@ const headerVariants = {
 };
 
 export default function AdvancedAnalyticsPage() {
+  const { data: session } = useSession(); // Obter sessão
+  const [totalSalesSummary, setTotalSalesSummary] = useState<TotalSalesData | null>(null);
+  const [totalOrdersSummary, setTotalOrdersSummary] = useState<TotalOrdersData | null>(null);
+  const [loadingSales, setLoadingSales] = useState(true);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+
+  useEffect(() => {
+    const fetchSummaries = async () => {
+      if (!session?.accessToken) {
+        setLoadingSales(false);
+        setLoadingOrders(false);
+        return;
+      }
+
+      try {
+        setLoadingSales(true);
+        const salesData = await getTotalSales(session.accessToken);
+        setTotalSalesSummary(salesData);
+      } catch (error) {
+        console.error("Erro ao buscar resumo de vendas:", error);
+        // Opcional: definir um estado de erro para sales
+      } finally {
+        setLoadingSales(false);
+      }
+
+      try {
+        setLoadingOrders(true);
+        const ordersData = await getTotalOrders(session.accessToken);
+        setTotalOrdersSummary(ordersData);
+      } catch (error) {
+        console.error("Erro ao buscar resumo de pedidos:", error);
+        // Opcional: definir um estado de erro para orders
+      } finally {
+        setLoadingOrders(false);
+      }
+    };
+
+    fetchSummaries();
+  }, [session]);
+
   // Definir quais cards usam fundo escuro para CardValue
   const darkBgVariants: Array<AnalyticsCardProps['variant']> = ['primary', 'secondary', 'success', 'danger', 'warning'];
 
@@ -126,19 +160,29 @@ export default function AdvancedAnalyticsPage() {
       title: "Total Vendas",
       icon: <CircleDollarSign size={20} />,
       variant: "primary",
-      summary: { value: "R$ 612.917", subtitle: "Vendas vs último mês", trend: "+2,08%", trendDirection: "up" },
-      chart: <MiniSparkline data={monthlyData} color="#FFFFFF" height={40} width={80} />,
-      modalContent: <div>... (conteúdo do modal vendas) ...</div>,
-      modalDescription: "Análise completa de vendas no período selecionado."
+      summary: { 
+        value: loadingSales || !totalSalesSummary ? "Carregando..." : totalSalesSummary.formatted_total, 
+        subtitle: loadingSales || !totalSalesSummary ? "Conectando..." : `Última atualização: ${new Date(totalSalesSummary.last_updated).toLocaleTimeString('pt-BR')}`, 
+        trend: loadingSales || !totalSalesSummary ? "" : `${totalSalesSummary.trend_percentage.toFixed(1)}%`, 
+        trendDirection: loadingSales || !totalSalesSummary ? "neutral" : totalSalesSummary.trend_direction 
+      },
+      chart: <MiniSparkline data={totalSalesSummary?.daily_sales_chart || monthlyData} color="#FFFFFF" height={40} width={80} />,
+      modalContent: <TotalVendasDetalhes />,
+      modalDescription: "Análise completa de vendas com dados reais do backend."
     },
     {
       title: "Total Pedidos",
       icon: <ShoppingCart size={20} />,
       variant: "secondary",
-      summary: { value: "34.760", subtitle: "Pedidos vs último mês", trend: "+12,4%", trendDirection: "up" },
-      chart: <MiniBarChart data={weekdayData} color="#FFFFFF" />,
+      summary: { 
+        value: loadingOrders || !totalOrdersSummary ? "Carregando..." : totalOrdersSummary.total_orders.toLocaleString('pt-BR'), 
+        subtitle: loadingOrders || !totalOrdersSummary ? "Conectando..." : `Média diária: ${totalOrdersSummary.average_orders_per_day}`, 
+        trend: loadingOrders || !totalOrdersSummary ? "" : `${totalOrdersSummary.trend_percentage.toFixed(1)}%`, 
+        trendDirection: loadingOrders || !totalOrdersSummary ? "neutral" : totalOrdersSummary.trend_direction
+      },
+      chart: <MiniBarChart data={totalOrdersSummary?.weekday_orders_chart.map(d => d.orders) || weekdayData} color="#FFFFFF" />,
       modalContent: <TotalPedidosDetalhes />,
-      modalDescription: "Análise detalhada dos pedidos no período."
+      modalDescription: "Análise detalhada dos pedidos com dados reais do backend."
     },
     {
       title: "Produtos Vendidos",
