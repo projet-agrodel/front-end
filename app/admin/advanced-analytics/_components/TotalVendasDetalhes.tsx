@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { getTotalSales, TotalSalesData } from '@/services/adminAnalyticsService';
 import { TrendingUp, TrendingDown, DollarSign, Calendar, RefreshCw } from 'lucide-react';
@@ -14,6 +14,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  Tick
 } from 'chart.js';
 
 ChartJS.register(
@@ -32,7 +33,7 @@ export default function TotalVendasDetalhes() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSalesData = async () => {
+  const fetchSalesData = useCallback(async () => {
     if (!session?.accessToken) return;
     
     try {
@@ -45,11 +46,11 @@ export default function TotalVendasDetalhes() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session]);
 
   useEffect(() => {
     fetchSalesData();
-  }, [session]);
+  }, [fetchSalesData]);
 
   if (loading) {
     return (
@@ -105,8 +106,12 @@ export default function TotalVendasDetalhes() {
       y: {
         beginAtZero: true,
         ticks: {
-          callback: function(value: any) {
-            return 'R$ ' + value.toLocaleString('pt-BR');
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          callback: function(tickValue: string | number, _index: number, _ticks: Tick[]) {
+            if (typeof tickValue === 'number') {
+              return 'R$ ' + tickValue.toLocaleString('pt-BR');
+            }
+            return tickValue;
           }
         }
       }
@@ -128,58 +133,54 @@ export default function TotalVendasDetalhes() {
     return 'text-gray-500';
   };
 
-  const chartLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-
   return (
     <div className="space-y-6">
       {/* Header com métricas principais */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total de Vendas</p>
-              <p className="text-3xl font-bold text-gray-900">{salesData.formatted_total}</p>
-            </div>
-            <DollarSign className="h-8 w-8 text-blue-500" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-blue-100 rounded-full">
+            <DollarSign className="h-7 w-7 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Total de Vendas</p>
+            <p className="text-2xl font-bold text-gray-800">{salesData.formatted_total}</p>
           </div>
         </div>
         
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Período Anterior</p>
-              <p className="text-2xl font-bold text-gray-700">
-                R$ {salesData.previous_period_sales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <Calendar className="h-8 w-8 text-gray-400" />
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-indigo-100 rounded-full">
+            <Calendar className="h-7 w-7 text-indigo-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Período Anterior</p>
+            <p className="text-2xl font-bold text-gray-800">
+              R$ {salesData.previous_period_sales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
           </div>
         </div>
         
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Variação</p>
-              <div className="flex items-center space-x-2">
-                {getTrendIcon()}
-                <span className={`text-2xl font-bold ${getTrendColor()}`}>
-                  {salesData.trend_percentage.toFixed(1)}%
-                </span>
-              </div>
-            </div>
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className={`p-3 rounded-full ${getTrendColor() === 'text-green-500' ? 'bg-green-100' : 'bg-red-100'}`}>
+            {getTrendIcon()}
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Variação</p>
+            <span className={`text-2xl font-bold ${getTrendColor().replace('-500', '-600')}`}>
+              {salesData.trend_percentage.toFixed(1)}%
+            </span>
           </div>
         </div>
       </div>      {/* Gráfico de vendas diárias */}
-      <div className="bg-white p-6 rounded-lg border shadow-sm">
+      <div className="bg-white p-6 rounded-lg shadow-lg">
         <Line data={chartData} options={chartOptions} />
       </div>
 
       {/* Detalhes das vendas diárias */}
-      <div className="bg-white p-6 rounded-lg border shadow-sm">
-        <h4 className="text-lg font-semibold mb-4">Vendas por Dia</h4>
+      <div className="bg-white p-6 rounded-lg shadow-lg">
+        <h4 className="text-lg font-semibold mb-4 text-gray-700">Vendas por Dia</h4>
         <div className="grid grid-cols-7 gap-2">
           {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((label, index) => (
-            <div key={index} className="text-center p-3 bg-gray-50 rounded">
+            <div key={index} className="text-center p-3 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">
               <div className="text-xs font-medium text-gray-600">{label}</div>
               <div className="text-sm font-bold text-gray-900 mt-1">
                 R$ {salesData.daily_sales_chart[index]?.toLocaleString('pt-BR', { minimumFractionDigits: 0 }) || '0'}
@@ -190,22 +191,22 @@ export default function TotalVendasDetalhes() {
       </div>
 
       {/* Informações do período */}
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h4 className="font-semibold text-gray-800 mb-2">Informações do Período</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div>
+      <div className="bg-white p-6 rounded-lg shadow-lg">
+        <h4 className="font-semibold text-gray-700 mb-3">Informações do Período</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div className="p-3 bg-gray-50 rounded-md">
             <span className="text-gray-600">Data inicial: </span>
             <span className="font-medium">{new Date(salesData.period.start_date).toLocaleDateString('pt-BR')}</span>
           </div>
-          <div>
+          <div className="p-3 bg-gray-50 rounded-md">
             <span className="text-gray-600">Data final: </span>
             <span className="font-medium">{new Date(salesData.period.end_date).toLocaleDateString('pt-BR')}</span>
           </div>
-          <div>
+          <div className="p-3 bg-gray-50 rounded-md">
             <span className="text-gray-600">Moeda: </span>
             <span className="font-medium">{salesData.currency}</span>
           </div>
-          <div>
+          <div className="p-3 bg-gray-50 rounded-md">
             <span className="text-gray-600">Última atualização: </span>
             <span className="font-medium">{new Date(salesData.last_updated).toLocaleString('pt-BR')}</span>
           </div>

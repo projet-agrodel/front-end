@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { getTotalOrders, TotalOrdersData } from '@/services/adminAnalyticsService';
 import { TrendingUp, TrendingDown, ShoppingCart, Calendar, RefreshCw, CheckCircle, Clock, XCircle } from 'lucide-react';
@@ -32,7 +32,7 @@ export default function TotalPedidosDetalhes() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOrdersData = async () => {
+  const fetchOrdersData = useCallback(async () => {
     if (!session?.accessToken) return;
     
     try {
@@ -45,11 +45,11 @@ export default function TotalPedidosDetalhes() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session]);
 
   useEffect(() => {
     fetchOrdersData();
-  }, [session]);
+  }, [fetchOrdersData]);
 
   if (loading) {
     return (
@@ -157,102 +157,100 @@ export default function TotalPedidosDetalhes() {
   return (
     <div className="space-y-6">
       {/* Header com métricas principais */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total de Pedidos</p>
-              <p className="text-3xl font-bold text-gray-900">{ordersData.total_orders.toLocaleString('pt-BR')}</p>
-            </div>
-            <ShoppingCart className="h-8 w-8 text-blue-500" />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-blue-100 rounded-full">
+            <ShoppingCart className="h-7 w-7 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Total de Pedidos</p>
+            <p className="text-2xl font-bold text-gray-800">{ordersData.total_orders.toLocaleString('pt-BR')}</p>
           </div>
         </div>
         
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Período Anterior</p>
-              <p className="text-2xl font-bold text-gray-700">
-                {ordersData.previous_period_orders.toLocaleString('pt-BR')}
-              </p>
-            </div>
-            <Calendar className="h-8 w-8 text-gray-400" />
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-indigo-100 rounded-full">
+            <Calendar className="h-7 w-7 text-indigo-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Período Anterior</p>
+            <p className="text-2xl font-bold text-gray-800">
+              {ordersData.previous_period_orders.toLocaleString('pt-BR')}
+            </p>
           </div>
         </div>
         
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Variação</p>
-              <div className="flex items-center space-x-2">
-                {getTrendIcon()}
-                <span className={`text-2xl font-bold ${getTrendColor()}`}>
-                  {ordersData.trend_percentage.toFixed(1)}%
-                </span>
-              </div>
-            </div>
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+           <div className={`p-3 rounded-full ${getTrendColor() === 'text-green-500' ? 'bg-green-100' : 'bg-red-100'}`}>
+            {getTrendIcon()}
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Variação</p>
+            <span className={`text-2xl font-bold ${getTrendColor().replace('-500', '-600')}`}>
+              {ordersData.trend_percentage.toFixed(1)}%
+            </span>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Média Diária</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {ordersData.average_orders_per_day.toFixed(1)}
-              </p>
-            </div>
-            <Calendar className="h-8 w-8 text-green-500" />
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-green-100 rounded-full">
+            <Calendar className="h-7 w-7 text-green-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Média Diária</p>
+            <p className="text-2xl font-bold text-gray-800">
+              {ordersData.average_orders_per_day.toFixed(1)}
+            </p>
           </div>
         </div>
       </div>
 
       {/* Status dos pedidos */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-          <div className="flex items-center space-x-3">
-            <CheckCircle className="h-8 w-8 text-green-500" />
-            <div>
-              <p className="text-sm font-medium text-green-600">Concluídos</p>
-              <p className="text-2xl font-bold text-green-700">
-                {ordersData.status_breakdown.completed.toLocaleString('pt-BR')}
-              </p>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-green-100 rounded-full">
+            <CheckCircle className="h-7 w-7 text-green-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Concluídos</p>
+            <p className="text-2xl font-bold text-green-700">
+              {ordersData.status_breakdown.completed.toLocaleString('pt-BR')}
+            </p>
           </div>
         </div>
 
-        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-          <div className="flex items-center space-x-3">
-            <Clock className="h-8 w-8 text-yellow-500" />
-            <div>
-              <p className="text-sm font-medium text-yellow-600">Pendentes</p>
-              <p className="text-2xl font-bold text-yellow-700">
-                {ordersData.status_breakdown.pending.toLocaleString('pt-BR')}
-              </p>
-            </div>
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-yellow-100 rounded-full">
+            <Clock className="h-7 w-7 text-yellow-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Pendentes</p>
+            <p className="text-2xl font-bold text-yellow-700">
+              {ordersData.status_breakdown.pending.toLocaleString('pt-BR')}
+            </p>
           </div>
         </div>
 
-        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-          <div className="flex items-center space-x-3">
-            <XCircle className="h-8 w-8 text-red-500" />
-            <div>
-              <p className="text-sm font-medium text-red-600">Cancelados</p>
-              <p className="text-2xl font-bold text-red-700">
-                {ordersData.status_breakdown.cancelled.toLocaleString('pt-BR')}
-              </p>
-            </div>
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-red-100 rounded-full">
+            <XCircle className="h-7 w-7 text-red-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Cancelados</p>
+            <p className="text-2xl font-bold text-red-700">
+              {ordersData.status_breakdown.cancelled.toLocaleString('pt-BR')}
+            </p>
           </div>
         </div>
       </div>      {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-          <h4 className="text-lg font-semibold mb-4">Pedidos por Dia da Semana</h4>
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h4 className="text-lg font-semibold mb-4 text-gray-700">Pedidos por Dia da Semana</h4>
           <Bar data={weekdayChartData} options={chartOptions} />
         </div>
 
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-          <h4 className="text-lg font-semibold mb-4">Status dos Pedidos</h4>
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h4 className="text-lg font-semibold mb-4 text-gray-700">Status dos Pedidos</h4>
           <div className="flex justify-center">
             <div className="w-64 h-64">
               <Doughnut data={statusChartData} options={chartOptions} />
@@ -262,18 +260,18 @@ export default function TotalPedidosDetalhes() {
       </div>
 
       {/* Informações do período */}
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h4 className="font-semibold text-gray-800 mb-2">Informações do Período</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div>
+      <div className="bg-white p-6 rounded-lg shadow-lg">
+        <h4 className="font-semibold text-gray-700 mb-3">Informações do Período</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div className="p-3 bg-gray-50 rounded-md">
             <span className="text-gray-600">Data inicial: </span>
             <span className="font-medium">{new Date(ordersData.period.start_date).toLocaleDateString('pt-BR')}</span>
           </div>
-          <div>
+          <div className="p-3 bg-gray-50 rounded-md">
             <span className="text-gray-600">Data final: </span>
             <span className="font-medium">{new Date(ordersData.period.end_date).toLocaleDateString('pt-BR')}</span>
           </div>
-          <div>
+          <div className="p-3 bg-gray-50 rounded-md">
             <span className="text-gray-600">Última atualização: </span>
             <span className="font-medium">{new Date(ordersData.last_updated).toLocaleString('pt-BR')}</span>
           </div>

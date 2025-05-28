@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { TrendingUp, ShoppingCart, Eye, CheckCircle, AlertOctagon, Zap, TrendingDown } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts'; // Usaremos BarChart para o funil
 
 const funnelData = [
   { stage: 'Visitantes', value: 12000, color: '#3b82f6' },         // Azul
@@ -94,9 +93,11 @@ const TaxaConversaoDetalhes: React.FC = () => {
                 {index < funnelData.length - 1 && (
                   <div className="flex justify-end items-center mt-0.5 pr-2">
                     <TrendingDown size={12} className="text-gray-400 mr-1" />
-                    <span className="text-xs text-gray-500">
-                      {conversionRates[index]?.rate} para "{conversionRates[index]?.to}"
-                    </span>
+                    <div className="mt-1 text-right">
+                      <span className="text-xs text-gray-500 block">
+                        {conversionRates[index]?.rate} para &quot;{conversionRates[index]?.to}&quot;
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
