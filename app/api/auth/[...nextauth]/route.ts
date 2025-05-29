@@ -28,7 +28,7 @@ export const authOptions: AuthOptions = {
 
           const data = await response.json();
 
-          if (!response.ok || !data || !data.access_token) {
+          if (!response.ok || !data) {
             throw new Error(data.message || 'Credenciais inválidas ou token não retornado');
           }
 

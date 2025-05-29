@@ -85,6 +85,7 @@ const Navbar = () => {
 
   // Mostrar interface de usuário não autenticado se a sessão for inválida
   const showAuthenticatedUI = status === 'authenticated' && sessionStatus === 'valid';
+  const isAdminUser = session?.user?.role === 'admin'
 
   return (
     <nav className="bg-white shadow-md z-100">
@@ -128,11 +129,11 @@ const Navbar = () => {
                 Produtos
               </Link>
 
-              {showAuthenticatedUI && session?.user?.role === 'admin' && (
+              {showAuthenticatedUI && isAdminUser && (
                 <Link 
                   href='/admin'
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
-                    pathname.startsWith('/admin') 
+                    pathname == '/admin' 
                       ? 'bg-green-500 text-white' 
                       : 'text-gray-700 hover:bg-green-100'
                   }`}
@@ -140,6 +141,20 @@ const Navbar = () => {
                   Admin
                 </Link>
               )}
+
+              
+              {showAuthenticatedUI && (
+                <Link 
+                  href={`${isAdminUser ? '/admin/tickets': '/tickets'}`}
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    pathname.startsWith('/admin/tickets') 
+                      ? 'bg-green-500 text-white' 
+                      : 'text-gray-700 hover:bg-green-100'
+                  }`}
+                >
+                  Tickets
+                </Link>
+              )}  
             </div>
           </div>
           
