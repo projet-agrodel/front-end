@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import DateRangeFilter from './_components/DateRangeFilter';
 import AnalyticsCard, { AnalyticsCardProps } from './_components/AnalyticsCard';
 import SalesByCategoryChart from './_components/SalesByCategoryChart';
@@ -36,6 +36,9 @@ import { motion } from 'framer-motion';
 
 // Indicador de tendência com seta para cima ou para baixo
 const TrendIndicator = ({ value, direction, colorClass }: { value: string, direction: 'up' | 'down' | 'neutral', colorClass: string }) => {
+  // LOG ADICIONADO DENTRO DE TrendIndicator
+  console.log("[TrendIndicator Props]", { value, direction, colorClass });
+
   const getIcon = () => {
     if (direction === 'up') return <TrendingUp size={14} className={colorClass} />;
     if (direction === 'down') return <TrendingDown size={14} className={colorClass} />;
@@ -65,6 +68,9 @@ const CardValue = ({
   chartComponent?: React.ReactNode,
   isDarkBg?: boolean
 }) => {
+    // LOG ADICIONADO DENTRO DE CardValue
+    console.log("[CardValue Props]", { value, subtitle, trend, trendDirection });
+
     const trendColorClass = trendDirection === 'up' ? (isDarkBg ? 'text-green-300' : 'text-green-500') 
                          : trendDirection === 'down' ? (isDarkBg ? 'text-red-300' : 'text-red-500') 
                          : (isDarkBg ? 'text-gray-300' : 'text-gray-500');
@@ -118,10 +124,15 @@ const headerVariants = {
 };
 
 export default function AdvancedAnalyticsPage() {
+  const [analyticsCardsData, setAnalyticsCardsData] = useState<any[]>([]);
+  const [loadingCards, setLoadingCards] = useState(true);
+  const [errorCards, setErrorCards] = useState<string | null>(null);
+  
   // Definir quais cards usam fundo escuro para CardValue
   const darkBgVariants: Array<AnalyticsCardProps['variant']> = ['primary', 'secondary', 'success', 'danger', 'warning'];
 
-  const analyticsCardsData = [
+  // Dados iniciais dos cards (sem o resumo do Ticket Médio que virá do backend)
+  const initialCardsData = [
     {
       title: "Total Vendas",
       icon: <CircleDollarSign size={20} />,
@@ -171,17 +182,18 @@ export default function AdvancedAnalyticsPage() {
       title: "Taxa de Conversão",
       icon: <TrendingUp size={20} />,
       variant: "default",
-      summary: { value: "4,8%", subtitle: "Conversão vs último mês", trend: "+0.5%", trendDirection: "up" },
+      summary: { value: "Carregando...", subtitle: "", trend: "", trendDirection: "neutral" }, // MUDADO PARA PLACEHOLDER
       chart: <MiniSparkline data={[2, 3, 5, 4, 6, 7, 8]} color="#4f46e5" height={40} width={80}/>,
       modalContent: <TaxaConversaoDetalhes />,
       modalDescription: "Detalhes sobre a taxa de conversão de visitantes para clientes."
     },
+    // Card de Ticket Médio será atualizado com dados do backend
     {
       title: "Ticket Médio",
       icon: <CreditCard size={20} />,
       variant: "default",
-      summary: { value: "R$ 125,30", subtitle: "Ticket vs último mês", trend: "-1,2%", trendDirection: "down" },
-      chart: <MiniBarChart data={[100,120,110,130,125,115,128]} color="#8b5cf6"/>,
+      summary: { value: "Carregando...", subtitle: "", trend: "", trendDirection: "neutral" }, // Placeholder
+      chart: <MiniBarChart data={[100,120,110,130,125,115,128]} color="#8b5cf6"/>, // Pode ser atualizado ou removido se o backend fornecer dados para o mini chart
       modalContent: <TicketMedioDetalhes />,
       modalDescription: "Análise do valor médio por pedido."
     },
@@ -194,6 +206,72 @@ export default function AdvancedAnalyticsPage() {
       modalDescription: "Visualização das últimas atividades na plataforma."
     }
   ];
+
+  useEffect(() => {
+    const fetchCardData = async () => {
+      try {
+        setLoadingCards(true);
+        setErrorCards(null);
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+        // Fetch para Ticket Médio Summary
+        const ticketMedioResponse = await fetch(`${baseUrl}/admin/analytics/ticket-medio/summary`);
+        if (!ticketMedioResponse.ok) {
+          console.error('Falha ao buscar resumo do ticket médio');
+          // Lidar com erro específico do ticket médio se necessário, ou lançar um erro geral
+        }
+        const ticketMedioSummaryData = await ticketMedioResponse.json();
+
+        // Fetch para Taxa de Conversão Summary
+        const taxaConversaoResponse = await fetch(`${baseUrl}/admin/analytics/taxa-conversao/summary`);
+        if (!taxaConversaoResponse.ok) {
+          console.error('Falha ao buscar resumo da taxa de conversão. Status:', taxaConversaoResponse.status);
+          // Lidar com erro específico da taxa de conversão se necessário
+        }
+        const taxaConversaoSummaryData = await taxaConversaoResponse.json();
+
+        // LOGS ADICIONADOS PARA DEBUG
+        console.log("Dados recebidos para Ticket Médio Summary:", ticketMedioSummaryData);
+        console.log("Dados recebidos para Taxa de Conversão Summary:", taxaConversaoSummaryData);
+
+        setAnalyticsCardsData(prevCards => 
+          prevCards.map(card => {
+            if (card.title === "Ticket Médio") {
+              return { ...card, summary: ticketMedioSummaryData ? ticketMedioSummaryData : card.summary }; 
+            }
+            if (card.title === "Taxa de Conversão") {
+              return { ...card, summary: taxaConversaoSummaryData ? taxaConversaoSummaryData : card.summary }; 
+            }
+            return card;
+          })
+        );
+
+      } catch (err) {
+        if (err instanceof Error) {
+          setErrorCards(err.message);
+        } else {
+          setErrorCards('Erro ao buscar resumos dos cards.');
+        }
+        console.error("Erro ao buscar resumos para page.tsx:", err);
+        // Em caso de erro geral, os cards manterão seus valores mockados ou placeholders
+        // Poderia-se definir um estado de erro individual por card se desejado
+      } finally {
+        setLoadingCards(false);
+      }
+    };
+    
+    setAnalyticsCardsData(initialCardsData); 
+    fetchCardData(); // Renomeado de fetchTicketMedioSummary para fetchCardData
+
+  }, []);
+
+  // Mostrar mensagem de carregamento geral ou erro para os cards, se aplicável
+  // if (loadingCards) {
+  //   return <div className="p-8 text-center"><p>Carregando dados dos cards de análise...</p></div>;
+  // }
+  // if (errorCards) {
+  //   return <div className="p-8 text-center text-red-500"><p>Erro ao carregar dados dos cards: {errorCards}</p></div>;
+  // }
 
   return (
     <motion.div 
@@ -212,7 +290,7 @@ export default function AdvancedAnalyticsPage() {
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-6">
-        {analyticsCardsData.map((card, idx) => (
+        {analyticsCardsData.length > 0 ? analyticsCardsData.map((card, idx) => (
           <AnalyticsCard 
             key={card.title} 
             title={card.title}
@@ -233,7 +311,17 @@ export default function AdvancedAnalyticsPage() {
             modalContent={card.modalContent}
             modalDescription={card.modalDescription}
           />
-        ))}
+        )) : (
+          <div className="col-span-full text-center">
+            {loadingCards ? (
+              <p>Carregando dados dos cards de análise...</p>
+            ) : errorCards ? (
+              <p>Erro ao carregar dados dos cards: {errorCards}</p>
+            ) : (
+              <p>Nenhum dado encontrado para os cards de análise.</p>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );
