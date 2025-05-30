@@ -30,7 +30,7 @@ export function ConfirmationModal({
 
     return (
         <motion.div
-            className="fixed inset-0 z-50 flex justify-center items-center p-4 backdrop-blur-sm bg-black bg-opacity-50"
+            className="fixed inset-0 z-50 flex justify-center items-center p-4 backdrop-blur-sm bg-transparent bg-opacity-50"
             variants={overlayVariants} initial="hidden" animate="visible" exit="exit"
             onClick={onCancel} 
         >

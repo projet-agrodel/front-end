@@ -25,7 +25,6 @@ export default function DateRangeFilter() {
       setIsCustomRangeOpen(true);
     } else {
       setIsCustomRangeOpen(false);
-      // Aqui você chamaria a função para atualizar os dados do dashboard com o novo range
       console.log(`Filtro de período alterado para: ${value}`);
     }
   };

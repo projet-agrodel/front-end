@@ -35,7 +35,7 @@ export interface ProductFormProps {
     updateProductFn: (id: string, payload: UpdateAdminProductPayload, token: string) => Promise<AdminProduct>;
 }
 
-const inputBaseClass = "block w-full px-4 py-3 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg shadow-sm transition-all duration-150 ease-in-out focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none";
+const inputBaseClass = "block w-full px-4 py-3 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg shadow-sm transition-all duration-150 ease-in-out focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none";
 const labelBaseClass = "block text-sm font-medium text-gray-700 mb-1.5";
 
 export function ProductForm({ 
@@ -197,122 +197,119 @@ export function ProductForm({
 
     return (
         <motion.div 
-            className="fixed inset-0 z-50 flex justify-center items-center p-4 backdrop-blur-md bg-black bg-opacity-60"
+            className="fixed inset-0 z-50 flex justify-center items-center p-4 backdrop-blur-md bg-transparent bg-opacity-60"
             variants={overlayVariants} initial="hidden" animate="visible" exit="exit"
             onClick={onClose} 
         >
             <motion.div
-                className="bg-gradient-to-br from-gray-50 to-slate-100 p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-2xl transform transition-all max-h-[90vh] flex flex-col"
+                className="bg-gradient-to-br from-white-50 to-gray-100 p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-2xl transform transition-all max-h-[90vh] flex flex-col"
                 variants={modalVariants}
                 onClick={(e) => e.stopPropagation()} 
             >
-                <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-purple-600 mb-6 sm:mb-8 text-center flex-shrink-0">
-                    {initialData ? 'Editar Produto' : 'Adicionar Novo Produto'}
-                </h2>
-                
-                <AnimatePresence mode="wait">
-                    {error && (
-                        <motion.div 
-                            key="error"
-                            initial={{opacity: 0, y: -10, height: 0}}
-                            animate={{opacity: 1, y: 0, height: 'auto'}}
-                            exit={{opacity: 0, y: -10, height: 0}}
-                            transition={{duration: 0.3}}
-                            className="mb-4 p-3.5 bg-red-50 border border-red-400 text-red-700 rounded-lg text-sm flex items-center shadow-md flex-shrink-0"
-                        >
-                            <AlertCircle size={20} className="mr-2.5 text-red-600 flex-shrink-0" />
-                            <span className="flex-grow">{error}</span>
-                            <button onClick={() => setError(null)} className="ml-2 text-red-600 hover:text-red-800">&times;</button>
-                        </motion.div>
-                    )}
-                    {successMessage && (
-                        <motion.div 
-                            key="success"
-                            initial={{opacity: 0, y: -10, height: 0}}
-                            animate={{opacity: 1, y: 0, height: 'auto'}}
-                            exit={{opacity: 0, y: -10, height: 0}}
-                            transition={{duration: 0.3}}
-                            className="mb-4 p-3.5 bg-green-50 border border-green-400 text-green-700 rounded-lg text-sm flex items-center shadow-md flex-shrink-0"
-                        >
-                            <CheckCircle2 size={20} className="mr-2.5 text-green-600 flex-shrink-0" />
-                            <span className="flex-grow">{successMessage}</span>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                <form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto flex-grow pr-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 scrollbar-thumb-rounded-full">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                        <div>
-                            <label htmlFor="name" className={labelBaseClass}>Nome <span className="text-red-500">*</span></label>
-                            <input type="text" name="name" id="name" value={formData.name || ''} onChange={handleChange} required className={inputBaseClass} disabled={isSubmitting} />
-                        </div>
-                        <div>
-                            <label htmlFor="price" className={labelBaseClass}>Preço (R$) <span className="text-red-500">*</span></label>
-                            <input type="number" name="price" id="price" value={formData.price ?? ''} onChange={handleChange} required min="0.01" step="0.01" className={inputBaseClass} disabled={isSubmitting} />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label htmlFor="description" className={labelBaseClass}>Descrição</label>
-                        <textarea name="description" id="description" value={formData.description || ''} onChange={handleChange} rows={3} className={`${inputBaseClass} min-h-[80px]`} disabled={isSubmitting}></textarea>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                        <div>
-                            <label htmlFor="stock" className={labelBaseClass}>Estoque <span className="text-red-500">*</span></label>
-                            <input type="number" name="stock" id="stock" value={formData.stock ?? ''} onChange={handleChange} required min="0" step="1" className={inputBaseClass} disabled={isSubmitting} />
-                        </div>
-                        <div>
-                            <label htmlFor="category_id" className={labelBaseClass}>Categoria</label>
-                            <select name="category_id" id="category_id" value={formData.category_id || ''} onChange={handleChange} className={`${inputBaseClass} appearance-none`} disabled={isSubmitting}>
-                                <option value="">Selecione uma categoria</option>
-                                {categories.map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label htmlFor="imageUrl" className={labelBaseClass}>URL da Imagem</label>
-                        <input type="url" name="imageUrl" id="imageUrl" value={formData.imageUrl || ''} onChange={handleChange} placeholder="https://exemplo.com/imagem.jpg" className={inputBaseClass} disabled={isSubmitting} />
-                    </div>
+                <div className="overflow-visible flex-grow min-h-0 pr-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 scrollbar-thumb-rounded-full">
+                    <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-green-700 mb-6 sm:mb-8 text-center flex-shrink-0">
+                        {initialData ? 'Editar Produto' : 'Adicionar Novo Produto'}
+                    </h2>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 items-center pt-2">
-                         <div>
-                            <label htmlFor="status" className={labelBaseClass}>Status</label>
-                            <select name="status" id="status" value={formData.status || 'Ativo'} onChange={handleChange} className={`${inputBaseClass} appearance-none`} disabled={isSubmitting}>
-                                <option value="Ativo">Ativo</option>
-                                <option value="Inativo">Inativo</option>
-                            </select>
-                        </div>
-                        <div className="flex items-center self-end pb-1 md:mt-0 mt-2">
-                            <input type="checkbox" name="isPromotion" id="isPromotion" checked={!!formData.isPromotion} onChange={handleChange} className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer shadow-sm" disabled={isSubmitting} />
-                            <label htmlFor="isPromotion" className="ml-2.5 block text-sm font-medium text-gray-700 cursor-pointer">Em Promoção?</label>
-                        </div>
-                    </div>
-
                     <AnimatePresence>
-                        {formData.isPromotion && (
+                        {error && (
                             <motion.div 
-                                initial={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
-                                animate={{ opacity: 1, height: 'auto', marginTop: '1.25rem', marginBottom: '1.25rem' }}
-                                exit={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
-                                transition={{duration: 0.3, ease: "easeInOut"}}
-                                className="overflow-hidden"
-                            >
-                                <label htmlFor="originalPrice" className={labelBaseClass}>Preço Original (R$) <span className="text-red-500">*</span></label>
-                                <input type="number" name="originalPrice" id="originalPrice" value={formData.originalPrice ?? ''} onChange={handleChange} required={formData.isPromotion} min="0.01" step="0.01" className={inputBaseClass} disabled={isSubmitting} />
+                                initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -5, scale: 0.98, transition: { duration: 0.2 } }}
+                                className="my-4 p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-start shadow-sm text-sm">
+                                <AlertCircle className="h-5 w-5 mr-2.5 flex-shrink-0" />
+                                <span className="flex-grow leading-snug">{error}</span>
                             </motion.div>
                         )}
                     </AnimatePresence>
-                </form>
+                    <AnimatePresence>
+                        {successMessage && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -5, scale: 0.98, transition: { duration: 0.2 } }}
+                                className="my-4 p-3.5 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-start shadow-sm text-sm">
+                                <CheckCircle2 className="h-5 w-5 mr-2.5 flex-shrink-0" />
+                                <span className="flex-grow leading-snug">{successMessage}</span>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                            <div>
+                                <label htmlFor="name" className={labelBaseClass}>Nome <span className="text-red-500">*</span></label>
+                                <input type="text" name="name" id="name" value={formData.name || ''} onChange={handleChange} required className={inputBaseClass} disabled={isSubmitting} />
+                            </div>
+                            <div>
+                                <label htmlFor="price" className={labelBaseClass}>Preço (R$) <span className="text-red-500">*</span></label>
+                                <input type="number" name="price" id="price" value={formData.price ?? ''} onChange={handleChange} required min="0.01" step="0.01" className={inputBaseClass} disabled={isSubmitting} />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label htmlFor="description" className={labelBaseClass}>Descrição</label>
+                            <textarea name="description" id="description" value={formData.description || ''} onChange={handleChange} rows={3} className={`${inputBaseClass} min-h-[80px]`} disabled={isSubmitting}></textarea>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                            <div>
+                                <label htmlFor="stock" className={labelBaseClass}>Estoque <span className="text-red-500">*</span></label>
+                                <input type="number" name="stock" id="stock" value={formData.stock ?? ''} onChange={handleChange} required min="0" step="1" className={inputBaseClass} disabled={isSubmitting} />
+                            </div>
+                            <div>
+                                <label htmlFor="category_id" className={labelBaseClass}>Categoria</label>
+                                <select name="category_id" id="category_id" value={formData.category_id || ''} onChange={handleChange} className={`${inputBaseClass} appearance-none`} disabled={isSubmitting}>
+                                    <option value="">Selecione uma categoria</option>
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label htmlFor="imageUrl" className={labelBaseClass}>URL da Imagem</label>
+                            <input type="url" name="imageUrl" id="imageUrl" value={formData.imageUrl || ''} onChange={handleChange} placeholder="https://exemplo.com/imagem.jpg" className={inputBaseClass} disabled={isSubmitting} />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 items-center pt-2">
+                             <div>
+                                <label htmlFor="status" className={labelBaseClass}>Status</label>
+                                <select name="status" id="status" value={formData.status || 'Ativo'} onChange={handleChange} className={`${inputBaseClass} appearance-none`} disabled={isSubmitting}>
+                                    <option value="Ativo">Ativo</option>
+                                    <option value="Inativo">Inativo</option>
+                                </select>
+                            </div>
+                            <div className="flex items-center self-end pb-1 md:mt-0 mt-2">
+                                <input type="checkbox" name="isPromotion" id="isPromotion" checked={!!formData.isPromotion} onChange={handleChange} className="h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer shadow-sm" disabled={isSubmitting} />
+                                <label htmlFor="isPromotion" className="ml-2.5 block text-sm font-medium text-gray-700 cursor-pointer">Em Promoção?</label>
+                            </div>
+                        </div>
+
+                        <AnimatePresence>
+                            {formData.isPromotion && (
+                                <motion.div 
+                                    initial={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
+                                    animate={{ opacity: 1, height: 'auto', marginTop: '1.25rem', marginBottom: '1.25rem' }}
+                                    exit={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
+                                    transition={{duration: 0.3, ease: "easeInOut"}}
+                                    className="overflow-hidden p-1"
+                                >
+                                    <label htmlFor="originalPrice" className={labelBaseClass}>Preço Original (R$) <span className="text-red-500">*</span></label>
+                                    <input type="number" name="originalPrice" id="originalPrice" value={formData.originalPrice ?? ''} onChange={handleChange} required={formData.isPromotion} min="0.01" step="0.01" className={inputBaseClass} disabled={isSubmitting} />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </form>
+                </div>
                 
-                <div className="flex justify-end gap-4 pt-6 mt-auto flex-shrink-0 border-t border-gray-200/80">
+                <div className="flex justify-end gap-4 pt-6 mt-3 flex-shrink-0 border-t border-gray-200/80">
                     <motion.button 
                         type="button" 
                         onClick={onClose} 
-                        className="px-7 py-3 bg-gray-200 text-gray-800 rounded-lg text-sm font-semibold hover:bg-gray-300/80 transition-all duration-150 ease-in-out shadow-sm disabled:opacity-60"
+                        className="px-7 py-3 bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-all duration-150 ease-in-out shadow-sm disabled:opacity-60"
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.98 }}
                         disabled={isSubmitting}
@@ -320,9 +317,9 @@ export function ProductForm({
                         Cancelar
                     </motion.button>
                     <motion.button 
-                        type="submit" // Alterado para submit, para que o form onSubmit seja acionado
-                        onClick={handleSubmit} // Pode manter se quiser forçar o handle, mas o type submit já faz
-                        className="px-7 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-sm font-semibold hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-150 ease-in-out shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-wait"
+                        type="submit" 
+                        onClick={handleSubmit} 
+                        className="px-7 py-3 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-lg text-sm font-semibold hover:from-green-600 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-150 ease-in-out shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-wait"
                         whileHover={{ scale: 1.03, y: -1 }}
                         whileTap={{ scale: 0.98, y: 0 }}
                         disabled={isSubmitting || !!successMessage} // Desabilitar também se mensagem de sucesso estiver visível

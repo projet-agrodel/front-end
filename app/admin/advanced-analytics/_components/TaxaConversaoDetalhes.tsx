@@ -173,9 +173,11 @@ const TaxaConversaoDetalhes: React.FC = () => {
                 {index < funnelData.length - 1 && conversionRates[index] && (
                   <div className="flex justify-end items-center mt-0.5 pr-2">
                     <TrendingDown size={12} className="text-gray-400 mr-1" />
-                    <span className="text-xs text-gray-500">
-                      {conversionRates[index].rate} para "{conversionRates[index].to}"
+                    <div className="mt-1 text-right">
+                      <span className="text-xs text-gray-500 block">
+                      {conversionRates[index]?.rate} para "{conversionRates[index]?.to}"
                     </span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -199,9 +201,9 @@ const TaxaConversaoDetalhes: React.FC = () => {
               </div>
             )) : <p className='text-sm text-gray-500'>Nenhuma otimização ou alerta encontrado.</p>}
             {optimizations.length > 0 && (
-              <button className="w-full mt-2 text-sm text-indigo-600 hover:text-indigo-800 transition-colors py-2 rounded-md bg-indigo-50 hover:bg-indigo-100 font-medium">
-                Ver todas as otimizações
-              </button>
+            <button className="w-full mt-2 text-sm text-indigo-600 hover:text-indigo-800 transition-colors py-2 rounded-md bg-indigo-50 hover:bg-indigo-100 font-medium">
+              Ver todas as otimizações
+            </button>
             )}
           </div>
         </div>

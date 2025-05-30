@@ -1,158 +1,294 @@
 'use client';
 
-import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { Package, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { getTotalOrders, TotalOrdersData } from '@/services/adminAnalyticsService';
+import { TrendingUp, TrendingDown, ShoppingCart, Calendar, RefreshCw, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Bar, Doughnut } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
 
-// Dados simulados permanecem os mesmos
-const mockPedidos = [
-  { id: '#PED001', cliente: 'Ana Silva', data: '2024-07-23', valor: 150.00, status: 'Entregue', itens: 3 },
-  { id: '#PED002', cliente: 'Bruno Costa', data: '2024-07-23', valor: 75.50, status: 'Enviado', itens: 1 },
-  { id: '#PED003', cliente: 'Carlos Dias', data: '2024-07-22', valor: 220.00, status: 'Processando', itens: 5 },
-  { id: '#PED004', cliente: 'Daniela Lima', data: '2024-07-22', valor: 99.90, status: 'Pendente', itens: 2 },
-  { id: '#PED005', cliente: 'Eduardo Souz', data: '2024-07-21', valor: 310.75, status: 'Entregue', itens: 4 },
-  { id: '#PED006', cliente: 'Fernanda Rui', data: '2024-07-20', valor: 180.20, status: 'Cancelado', itens: 2 },
-  { id: '#PED007', cliente: 'Gabriel Alves', data: '2024-07-20', valor: 55.00, status: 'Entregue', itens: 1 },
-];
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
-const statusData = [
-  { name: 'Entregue', value: mockPedidos.filter(p => p.status === 'Entregue').length, color: '#22c55e' },
-  { name: 'Enviado', value: mockPedidos.filter(p => p.status === 'Enviado').length, color: '#3b82f6' },
-  { name: 'Processando', value: mockPedidos.filter(p => p.status === 'Processando').length, color: '#eab308' },
-  { name: 'Pendente', value: mockPedidos.filter(p => p.status === 'Pendente').length, color: '#f97316' },
-  { name: 'Cancelado', value: mockPedidos.filter(p => p.status === 'Cancelado').length, color: '#ef4444' },
-];
+export default function TotalPedidosDetalhes() {
+  const { data: session } = useSession();
+  const [ordersData, setOrdersData] = useState<TotalOrdersData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-// Função para estilizar o status como um badge
-const StatusBadge = ({ status }: { status: string }) => {
-  let bgColor = 'bg-gray-200';
-  let textColor = 'text-gray-800';
+  const fetchOrdersData = useCallback(async () => {
+    if (!session?.accessToken) return;
+    
+    try {
+      setLoading(true);
+      const data = await getTotalOrders(session.accessToken);
+      setOrdersData(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
+    } finally {
+      setLoading(false);
+    }
+  }, [session]);
 
-  switch (status) {
-    case 'Entregue':
-      bgColor = 'bg-green-100';
-      textColor = 'text-green-700';
-      break;
-    case 'Enviado':
-      bgColor = 'bg-blue-100';
-      textColor = 'text-blue-700';
-      break;
-    case 'Processando':
-      bgColor = 'bg-yellow-100';
-      textColor = 'text-yellow-700';
-      break;
-    case 'Pendente':
-      bgColor = 'bg-orange-100';
-      textColor = 'text-orange-700';
-      break;
-    case 'Cancelado':
-      bgColor = 'bg-red-100';
-      textColor = 'text-red-700';
-      break;
+  useEffect(() => {
+    fetchOrdersData();
+  }, [fetchOrdersData]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <RefreshCw className="animate-spin h-8 w-8 text-blue-500" />
+        <span className="ml-2 text-gray-600">Carregando dados de pedidos...</span>
+      </div>
+    );
   }
-  return (
-    <span className={`px-2 py-1 text-xs font-medium rounded-full ${bgColor} ${textColor}`}>
-      {status}
-    </span>
-  );
-};
 
-const TotalPedidosDetalhes: React.FC = () => {
-  const totalPedidos = mockPedidos.length;
-  const totalValorPedidos = mockPedidos.reduce((acc, pedido) => acc + pedido.valor, 0);
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-500 mb-4">{error}</p>
+        <button 
+          onClick={fetchOrdersData}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+  if (!ordersData) {
+    return <div className="text-center py-8 text-gray-500">Nenhum dado disponível</div>;
+  }
+
+  const weekdayChartData = {
+    labels: ordersData.weekday_orders_chart.map(item => item.day),
+    datasets: [
+      {
+        label: 'Pedidos por Dia',
+        data: ordersData.weekday_orders_chart.map(item => item.orders),
+        backgroundColor: [
+          'rgba(99, 102, 241, 0.8)',
+          'rgba(59, 130, 246, 0.8)',
+          'rgba(16, 185, 129, 0.8)',
+          'rgba(245, 158, 11, 0.8)',
+          'rgba(239, 68, 68, 0.8)',
+          'rgba(139, 92, 246, 0.8)',
+          'rgba(6, 182, 212, 0.8)',
+        ],
+        borderColor: [
+          'rgba(99, 102, 241, 1)',
+          'rgba(59, 130, 246, 1)',
+          'rgba(16, 185, 129, 1)',
+          'rgba(245, 158, 11, 1)',
+          'rgba(239, 68, 68, 1)',
+          'rgba(139, 92, 246, 1)',
+          'rgba(6, 182, 212, 1)',
+        ],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const statusChartData = {
+    labels: ['Concluídos', 'Pendentes', 'Cancelados'],
+    datasets: [
+      {
+        data: [
+          ordersData.status_breakdown.completed,
+          ordersData.status_breakdown.pending,
+          ordersData.status_breakdown.cancelled,
+        ],
+        backgroundColor: [
+          'rgba(16, 185, 129, 0.8)',
+          'rgba(245, 158, 11, 0.8)',
+          'rgba(239, 68, 68, 0.8)',
+        ],
+        borderColor: [
+          'rgba(16, 185, 129, 1)',
+          'rgba(245, 158, 11, 1)',
+          'rgba(239, 68, 68, 1)',
+        ],
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+    },
+  };
+
+  const getTrendIcon = () => {
+    if (ordersData.trend_direction === 'up') {
+      return <TrendingUp className="h-5 w-5 text-green-500" />;
+    } else if (ordersData.trend_direction === 'down') {
+      return <TrendingDown className="h-5 w-5 text-red-500" />;
+    }
+    return <ShoppingCart className="h-5 w-5 text-gray-500" />;
+  };
+
+  const getTrendColor = () => {
+    if (ordersData.trend_direction === 'up') return 'text-green-500';
+    if (ordersData.trend_direction === 'down') return 'text-red-500';
+    return 'text-gray-500';
+  };
 
   return (
-    <div className="space-y-6 p-1"> {/* Adicionado p-1 para evitar corte de sombra no modal */} 
-      <h2 className="text-2xl font-semibold text-gray-800">Detalhamento de Pedidos</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-lg">
-          <h3 className="text-lg font-medium text-gray-700 mb-4">Resumo dos Status</h3>
-          <div className="h-60 md:h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value, name) => [value, name]} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+    <div className="space-y-6">
+      {/* Header com métricas principais */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-blue-100 rounded-full">
+            <ShoppingCart className="h-7 w-7 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Total de Pedidos</p>
+            <p className="text-2xl font-bold text-gray-800">{ordersData.total_orders.toLocaleString('pt-BR')}</p>
+          </div>
+        </div>
+        
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-indigo-100 rounded-full">
+            <Calendar className="h-7 w-7 text-indigo-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Período Anterior</p>
+            <p className="text-2xl font-bold text-gray-800">
+              {ordersData.previous_period_orders.toLocaleString('pt-BR')}
+            </p>
+          </div>
+        </div>
+        
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+           <div className={`p-3 rounded-full ${getTrendColor() === 'text-green-500' ? 'bg-green-100' : 'bg-red-100'}`}>
+            {getTrendIcon()}
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Variação</p>
+            <span className={`text-2xl font-bold ${getTrendColor().replace('-500', '-600')}`}>
+              {ordersData.trend_percentage.toFixed(1)}%
+            </span>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-lg space-y-4">
-            <h3 className="text-lg font-medium text-gray-700 mb-3">Estatísticas Gerais</h3>
-            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors">
-                <div className="flex items-center space-x-3">
-                    <Package size={20} className="text-blue-600"/>
-                    <span className="text-sm text-gray-700">Total de Pedidos:</span>
-                </div>
-                <span className="text-lg font-semibold text-blue-700">{totalPedidos}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-green-50 rounded-md hover:bg-green-100 transition-colors">
-                <div className="flex items-center space-x-3">
-                     <CheckCircle size={20} className="text-green-600"/>
-                    <span className="text-sm text-gray-700">Valor Total:</span>
-                </div>
-                <span className="text-lg font-semibold text-green-700">R$ {totalValorPedidos.toFixed(2)}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-md hover:bg-yellow-100 transition-colors">
-                 <div className="flex items-center space-x-3">
-                    <Clock size={20} className="text-yellow-600"/>
-                    <span className="text-sm text-gray-700">Pendentes:</span>
-                </div>
-                <span className="text-lg font-semibold text-yellow-700">{statusData.find(s => s.name === 'Pendente')?.value || 0}</span>
-            </div>
-             <div className="flex items-center justify-between p-3 bg-red-50 rounded-md hover:bg-red-100 transition-colors">
-                 <div className="flex items-center space-x-3">
-                    <AlertTriangle size={20} className="text-red-600"/>
-                    <span className="text-sm text-gray-700">Cancelados:</span>
-                </div>
-                <span className="text-lg font-semibold text-red-700">{statusData.find(s => s.name === 'Cancelado')?.value || 0}</span>
-            </div>
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-green-100 rounded-full">
+            <Calendar className="h-7 w-7 text-green-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Média Diária</p>
+            <p className="text-2xl font-bold text-gray-800">
+              {ordersData.average_orders_per_day.toFixed(1)}
+            </p>
+          </div>
         </div>
       </div>
 
-      <div>
-        <h3 className="text-lg font-medium text-gray-700 mb-4 mt-6">Pedidos Recentes</h3>
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Itens</th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {mockPedidos.map((pedido) => (
-                  <tr key={pedido.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{pedido.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{pedido.cliente}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(pedido.data).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{pedido.itens}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">R$ {pedido.valor.toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                      <StatusBadge status={pedido.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Status dos pedidos */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-green-100 rounded-full">
+            <CheckCircle className="h-7 w-7 text-green-600" />
           </div>
-          {/* Para adicionar uma barra de rolagem se a tabela for muito alta, o wrapper do modal já faz isso. 
-              Se for necessário dentro desta seção especificamente, um div com max-h- e overflow-auto pode ser adicionado envolvendo a table. */}
+          <div>
+            <p className="text-sm font-medium text-gray-500">Concluídos</p>
+            <p className="text-2xl font-bold text-green-700">
+              {ordersData.status_breakdown.completed.toLocaleString('pt-BR')}
+            </p>
+          </div>
         </div>
+
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-yellow-100 rounded-full">
+            <Clock className="h-7 w-7 text-yellow-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Pendentes</p>
+            <p className="text-2xl font-bold text-yellow-700">
+              {ordersData.status_breakdown.pending.toLocaleString('pt-BR')}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+          <div className="p-3 bg-red-100 rounded-full">
+            <XCircle className="h-7 w-7 text-red-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Cancelados</p>
+            <p className="text-2xl font-bold text-red-700">
+              {ordersData.status_breakdown.cancelled.toLocaleString('pt-BR')}
+            </p>
+          </div>
+        </div>
+      </div>      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h4 className="text-lg font-semibold mb-4 text-gray-700">Pedidos por Dia da Semana</h4>
+          <Bar data={weekdayChartData} options={chartOptions} />
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h4 className="text-lg font-semibold mb-4 text-gray-700">Status dos Pedidos</h4>
+          <div className="flex justify-center">
+            <div className="w-64 h-64">
+              <Doughnut data={statusChartData} options={chartOptions} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Informações do período */}
+      <div className="bg-white p-6 rounded-lg shadow-lg">
+        <h4 className="font-semibold text-gray-700 mb-3">Informações do Período</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div className="p-3 bg-gray-50 rounded-md">
+            <span className="text-gray-600">Data inicial: </span>
+            <span className="font-medium">{new Date(ordersData.period.start_date).toLocaleDateString('pt-BR')}</span>
+          </div>
+          <div className="p-3 bg-gray-50 rounded-md">
+            <span className="text-gray-600">Data final: </span>
+            <span className="font-medium">{new Date(ordersData.period.end_date).toLocaleDateString('pt-BR')}</span>
+          </div>
+          <div className="p-3 bg-gray-50 rounded-md">
+            <span className="text-gray-600">Última atualização: </span>
+            <span className="font-medium">{new Date(ordersData.last_updated).toLocaleString('pt-BR')}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Botão de atualização */}
+      <div className="flex justify-end">
+        <button 
+          onClick={fetchOrdersData}
+          disabled={loading}
+          className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>Atualizar Dados</span>
+        </button>
       </div>
     </div>
   );
-};
-
-export default TotalPedidosDetalhes; 
+}

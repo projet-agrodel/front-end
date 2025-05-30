@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image'; // Usar para imagens futuramente
 import { Edit, Trash2 } from 'lucide-react'; // Importar ícone de edição e Trash2
 
 // Reutilizar a interface Product (idealmente, importar de um local compartilhado)
@@ -80,7 +79,7 @@ export default function ProductTable({ products, onEdit, onDelete }: ProductTabl
                              <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-medium space-x-2">
                                 <button 
                                     onClick={() => onEdit(product)}
-                                    className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-indigo-100 transition-colors"
+                                    className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-100 transition-colors"
                                     title="Editar Produto"
                                 >
                                     <Edit size={18} />
