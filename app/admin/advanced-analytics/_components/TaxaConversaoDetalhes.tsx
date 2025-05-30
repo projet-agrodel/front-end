@@ -118,7 +118,7 @@ const TaxaConversaoDetalhes: React.FC = () => {
 
   return (
     <div className="space-y-6 p-1">
-      <h2 className="text-2xl font-semibold text-gray-800">Análise da Taxa de Conversão (Dados do Backend)</h2>
+      <h2 className="text-2xl font-semibold text-gray-800">Análise da Taxa de Conversão</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-3 hover:bg-gray-50 transition-colors">

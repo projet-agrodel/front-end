@@ -98,6 +98,18 @@ export interface TaxaConversaoDetailsData {
 }
 
 // --- Resumo do Ticket Médio ---
+export interface TicketMedioEvolucaoItem {
+  data: string;
+  valor: number;
+}
+
+export interface ProdutoImpactoItem {
+  id: string;
+  nome: string;
+  valorMedioAdicionado: number;
+  imagemUrl: string;
+}
+
 export interface TicketMedioSummaryData {
   value: string;
   subtitle: string;
@@ -111,6 +123,31 @@ export interface TaxaConversaoSummaryData {
   subtitle: string;
   trend: string;
   trendDirection: 'up' | 'down' | 'neutral';
+}
+
+export interface VisitanteEvolucaoItem {
+  dia: string;
+  visitantes: number;
+}
+
+export interface FonteTrafegoItem {
+  nome: string;
+  visitantes: number;
+  percentual: number;
+  iconName: string;
+}
+
+export interface VisitantesUnicosSummaryCardsData {
+  totalVisitantes: number;
+  visitantesRecorrentesPercentual: number;
+  novasSessoesPercentual: number;
+  taxaRejeicaoPercentual: number;
+}
+
+export interface VisitantesUnicosDetailsData {
+  evolutionData: VisitanteEvolucaoItem[];
+  trafficSourcesData: FonteTrafegoItem[];
+  summaryCardsData: VisitantesUnicosSummaryCardsData;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -314,25 +351,45 @@ export async function getNewCustomers(token: string, startDate?: string, endDate
   return response.json();
 }
 
-// --- Resumo do Ticket Médio ---
-export async function getTicketMedioSummary(token: string): Promise<TicketMedioSummaryData> {
-  const response = await fetch(`${API_URL}/admin/analytics/ticket-medio/summary`, {
-    method: 'GET',
+// --- Funções para Ticket Médio ---
+export const getTicketMedioEvolution = async (token: string): Promise<TicketMedioEvolucaoItem[]> => {
+  const response = await fetch(`${API_URL}/admin/analytics/ticket-medio/evolution`, {
     headers: {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
+    },
   });
   if (!response.ok) {
-    let errorMessage = `Erro HTTP: ${response.status} ao buscar resumo do ticket médio.`;
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.msg || errorData.message || errorMessage;
-    } catch (e) { /* Mantém errorMessage original */ }
-    throw new Error(errorMessage);
+    const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido ao buscar evolução do ticket médio' }));
+    throw new Error(errorData.message || `Falha ao buscar evolução do ticket médio: ${response.statusText}`);
   }
   return response.json();
-}
+};
+
+export const getTicketMedioProductsImpact = async (token: string): Promise<ProdutoImpactoItem[]> => {
+  const response = await fetch(`${API_URL}/admin/analytics/ticket-medio/products-impact`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido ao buscar impacto de produtos no ticket médio' }));
+    throw new Error(errorData.message || `Falha ao buscar impacto de produtos no ticket médio: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+export const getTicketMedioSummary = async (token: string): Promise<TicketMedioSummaryData> => {
+  const response = await fetch(`${API_URL}/admin/analytics/ticket-medio/summary`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido ao buscar resumo do ticket médio' }));
+    throw new Error(errorData.message || `Falha ao buscar resumo do ticket médio: ${response.statusText}`);
+  }
+  return response.json();
+};
 
 // --- Resumo da Taxa de Conversão ---
 export async function getTaxaConversaoSummary(token: string): Promise<TaxaConversaoSummaryData> {
@@ -353,3 +410,19 @@ export async function getTaxaConversaoSummary(token: string): Promise<TaxaConver
   }
   return response.json();
 }
+
+export const getVisitantesUnicosDetails = async (token: string): Promise<VisitantesUnicosDetailsData> => {
+  const response = await fetch(`${API_URL}/admin/analytics/visitantes-unicos/details`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido ao buscar detalhes de visitantes únicos.' }));
+    // É uma boa prática logar o erro também no lado do cliente para debugging
+    console.error("API Error in getVisitantesUnicosDetails:", errorData);
+    throw new Error(errorData.message || `Erro ${response.status} ao buscar detalhes de visitantes.`);
+  }
+  return response.json();
+};

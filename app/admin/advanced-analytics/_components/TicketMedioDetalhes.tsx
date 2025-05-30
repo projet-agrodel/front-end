@@ -1,66 +1,61 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { DollarSign, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Gift } from 'lucide-react';
-
-// Estruturas de dados esperadas
-interface TicketMedioEvolucaoItem {
-  data: string;
-  valor: number;
-}
-
-interface ProdutoImpactoItem {
-  id: string;
-  nome: string;
-  valorMedioAdicionado: number;
-  imagemUrl: string;
-}
+import { DollarSign, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Gift, RefreshCw } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { 
+  getTicketMedioEvolution, 
+  getTicketMedioProductsImpact,
+  TicketMedioEvolucaoItem,
+  ProdutoImpactoItem
+} from '@/services/adminAnalyticsService';
 
 const TicketMedioDetalhes: React.FC = () => {
+  const { data: session, status: sessionStatus } = useSession();
+  const token = session?.accessToken as string | undefined;
+
   const [ticketMedioData, setTicketMedioData] = useState<TicketMedioEvolucaoItem[]>([]);
   const [produtosImpactoTicket, setProdutosImpactoTicket] = useState<ProdutoImpactoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        // ATENÇÃO: Atualize a URL base da API se necessário (ex: process.env.NEXT_PUBLIC_API_URL)
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'; // URL base da API
-
-        const [evolutionRes, productsRes] = await Promise.all([
-          fetch(`${baseUrl}/admin/analytics/ticket-medio/evolution`),
-          fetch(`${baseUrl}/admin/analytics/ticket-medio/products-impact`)
-        ]);
-
-        if (!evolutionRes.ok || !productsRes.ok) {
-          throw new Error('Falha ao buscar dados do backend');
-        }
-
-        const evolutionData = await evolutionRes.json();
-        const productsData = await productsRes.json();
-
-        setTicketMedioData(evolutionData);
-        setProdutosImpactoTicket(productsData);
-
-      } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('Ocorreu um erro desconhecido');
-        }
-        // Em caso de erro, poderia carregar dados de fallback ou mostrar mensagem
-        console.error("Erro ao buscar dados para TicketMedioDetalhes:", err);
-      } finally {
-        setLoading(false);
+  const fetchData = useCallback(async () => {
+    if (sessionStatus === 'loading' || !token) {
+      if (sessionStatus !== 'authenticated') { // Não definir erro se estiver apenas carregando a sessão
+        setError("Usuário não autenticado ou token indisponível.");
       }
-    };
+      setLoading(sessionStatus === 'loading'); // Mantém loading true se a sessão estiver carregando
+      return;
+    }
 
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [evolutionData, productsData] = await Promise.all([
+        getTicketMedioEvolution(token),
+        getTicketMedioProductsImpact(token)
+      ]);
+
+      setTicketMedioData(evolutionData);
+      setProdutosImpactoTicket(productsData);
+
+    } catch (err) {
+      let errorMessage = "Ocorreu um erro desconhecido ao buscar dados do ticket médio.";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
+      console.error("Erro ao buscar dados para TicketMedioDetalhes:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionStatus, token]);
+
+  useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   // Calcula as métricas com base nos dados do estado
   const ticketMedioAtual = ticketMedioData.length > 0 ? ticketMedioData[ticketMedioData.length - 1].valor : 0;
@@ -71,21 +66,61 @@ const TicketMedioDetalhes: React.FC = () => {
   const maiorTicket = ticketMedioData.length > 0 ? Math.max(...ticketMedioData.map(item => item.valor)) : 0;
   const menorTicket = ticketMedioData.length > 0 ? Math.min(...ticketMedioData.map(item => item.valor)) : 0;
 
+  if (loading && sessionStatus === 'loading') {
+    return (
+      <div className="flex items-center justify-center py-8 h-96">
+        <RefreshCw className="animate-spin h-8 w-8 text-blue-500" />
+        <span className="ml-2 text-gray-600">Carregando sessão...</span>
+      </div>
+    );
+  }
+
   if (loading) {
-    return <div className="p-6 text-center"><p>Carregando detalhes do ticket médio...</p></div>;
+    return (
+      <div className="flex items-center justify-center py-8 h-96">
+        <RefreshCw className="animate-spin h-8 w-8 text-blue-500" />
+        <span className="ml-2 text-gray-600">Carregando detalhes do ticket médio...</span>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="p-6 text-center text-red-500"><p>Erro ao carregar dados: {error}</p><p>Verifique se o backend está rodando e acessível.</p></div>;
+    return (
+      <div className="text-center py-8 h-96">
+        <p className="text-red-500 mb-4">{error}</p>
+        {sessionStatus === 'authenticated' && token && ( // Só mostra o botão de tentar novamente se autenticado
+          <button
+            onClick={fetchData}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center space-x-2 mx-auto"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span>Tentar novamente</span>
+          </button>
+        )}
+         {sessionStatus !== 'authenticated' && !token && (
+            <p className="text-sm text-gray-500">Por favor, faça login para ver estes dados.</p>
+        )}
+      </div>
+    );
   }
   
   if (ticketMedioData.length === 0 && produtosImpactoTicket.length === 0 && !loading) {
-    return <div className="p-6 text-center"><p>Não há dados de ticket médio disponíveis no momento.</p></div>
+    return <div className="text-center py-8 text-gray-500 h-96 flex items-center justify-center">Não há dados de ticket médio disponíveis no momento.</div>
   }
 
   return (
     <div className="space-y-6 p-1">
-      <h2 className="text-2xl font-semibold text-gray-800">Análise do Ticket Médio (Dados do Backend)</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-semibold text-gray-800">Análise do Ticket Médio</h2>
+        <button 
+          onClick={fetchData}
+          disabled={loading || sessionStatus === 'loading' || !token}
+          className="flex items-center space-x-2 px-3 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 text-sm"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>Atualizar</span>
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-3 hover:bg-gray-50 transition-colors">
@@ -147,18 +182,18 @@ const TicketMedioDetalhes: React.FC = () => {
         </div>
 
         <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-lg">
-          <h3 className="text-lg font-medium text-gray-700 mb-5">Produtos de Maior Impacto no Ticket (Dados do Backend)</h3>
+          <h3 className="text-lg font-medium text-gray-700 mb-5">Produtos de Maior Impacto no Ticket</h3>
           <div className="space-y-3 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pr-2">
             {produtosImpactoTicket.length > 0 ? (
               produtosImpactoTicket.map((produto) => (
-                <div key={produto.id} className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <img src={produto.imagemUrl} alt={produto.nome} className="w-12 h-12 rounded-md object-cover mr-4 border" />
-                  <div className="flex-grow">
-                    <p className="text-sm font-medium text-gray-800 truncate">{produto.nome}</p>
-                    <p className="text-xs text-green-600">+ R$ {produto.valorMedioAdicionado.toFixed(2)} no ticket</p>
-                  </div>
-                  <Gift size={18} className="text-indigo-500 ml-2 flex-shrink-0" />
+              <div key={produto.id} className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <img src={produto.imagemUrl} alt={produto.nome} className="w-12 h-12 rounded-md object-cover mr-4 border" />
+                <div className="flex-grow">
+                  <p className="text-sm font-medium text-gray-800 truncate">{produto.nome}</p>
+                  <p className="text-xs text-green-600">+ R$ {produto.valorMedioAdicionado.toFixed(2)} no ticket</p>
                 </div>
+                <Gift size={18} className="text-indigo-500 ml-2 flex-shrink-0" />
+              </div>
               ))
             ) : (
               <p className='text-sm text-gray-500 text-center py-4'>Nenhum produto de impacto encontrado.</p>
