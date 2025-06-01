@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { LogOut, User, Settings, Shield } from 'lucide-react';
+import { LogOut, User, Settings, Shield, Package2 } from 'lucide-react';
 import CartIcon from './CartIcon';
 import { useEffect, useState } from 'react';
 import {
@@ -142,18 +142,30 @@ const Navbar = () => {
                 </Link>
               )}
 
-              
               {showAuthenticatedUI && (
-                <Link 
-                  href={`${isAdminUser ? '/admin/tickets': '/tickets'}`}
-                  className={`px-3 py-2 rounded-md text-sm font-medium ${
-                    pathname.startsWith('/admin/tickets') 
-                      ? 'bg-green-500 text-white' 
-                      : 'text-gray-700 hover:bg-green-100'
-                  }`}
-                >
-                  Tickets
-                </Link>
+                <>
+                  <Link 
+                    href='/pedidos'
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                      pathname.startsWith('/pedidos') 
+                        ? 'bg-green-500 text-white' 
+                        : 'text-gray-700 hover:bg-green-100'
+                    }`}
+                  >
+                    Meus Pedidos
+                  </Link>
+
+                  <Link 
+                    href={`${isAdminUser ? '/admin/tickets': '/tickets'}`}
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                      pathname.startsWith('/admin/tickets') 
+                        ? 'bg-green-500 text-white' 
+                        : 'text-gray-700 hover:bg-green-100'
+                    }`}
+                  >
+                    Tickets
+                  </Link>
+                </>
               )}  
             </div>
           </div>
@@ -191,6 +203,10 @@ const Navbar = () => {
                       <span>Painel Admin</span>
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem onClick={() => router.push('/pedidos')}>
+                    <Package2 className="mr-2 h-4 w-4" />
+                    <span>Meus Pedidos</span>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push('/profile/settings')}>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Configurações</span>

@@ -12,7 +12,7 @@ export interface User extends Timestamps {
   name: string;
   email: string;
   phone?: string | null; // Tornar opcional/nulável se puder ser nulo no DB/resposta
-  type: 'admin' | 'user'; // Consistente com UserType do backend
+  type: "admin" | "user"; // Consistente com UserType do backend
   avatar?: string | null; // URL do avatar do usuário
 
   // Relacionamentos (opcionais, pois não vêm por padrão de user.to_dict())
@@ -47,37 +47,17 @@ export interface Produto extends Timestamps {
   description: string;
   price: number;
   stock: number;
-  img?: string
+  img?: string;
 
   // Relacionamentos
   carrinhoItens?: CarrinhoItem[];
   pedidoItens?: PedidoItem[];
-  category?: Categoria
+  category?: Categoria;
 }
 
 export interface Categoria extends Timestamps {
   id: number;
   name: string;
-}
-
-export interface Pedido extends Timestamps {
-  id: number;
-  description?: string | null;
-  amount: number;
-  user_id: number;
-  user?: User;
-  pagamento?: Pagamento;
-  itens?: PedidoItem[];
-}
-
-export interface Pagamento extends Timestamps {
-  id: number;
-  pedido_id: number;
-  payment_method: 'Cartão' | 'PIX';
-  status: 'Aprovado' | 'Pendente' | 'Rejeitado';
-  amount: number;
-  transaction_id?: string | null;
-  pedido?: Pedido;
 }
 
 export interface CarrinhoItem {
@@ -88,13 +68,36 @@ export interface CarrinhoItem {
   produto?: Produto;
 }
 
-export interface PedidoItem {
-  order_item_id: number;
+export interface Pedido extends Timestamps {
+  id: number;
+  description?: string | null;
+  amount: number;
+  status: "Em Processamento" | "Não autorizado" | "Concluido";
+  user_id: number;
+
+  user?: User;
+  payments?: Pagamento[];
+  items?: PedidoItem[];
+}
+
+export interface Pagamento extends Timestamps {
+  id: number;
   pedido_id: number;
-  produto_id: number;
-  quantity: number;
+  payment_method: "Cartão" | "PIX";
+  status: "Aprovado" | "Pendente" | "Rejeitado";
+  amount: number;
+  transaction_id?: string | null;
   pedido?: Pedido;
-  produto?: Produto;
+}
+
+export interface PedidoItem {
+  id: number;
+  order_id: number;
+  product_id: number;
+  product_name: string | null;
+  price: number;
+  quantity: number;
+  order?: Pedido
 }
 
 export interface Ticket extends Timestamps {
@@ -102,8 +105,8 @@ export interface Ticket extends Timestamps {
   user_id: number;
   title: string;
   description?: string;
-  status: TicketStatus
-  priority: TicketPriority
+  status: TicketStatus;
+  priority: TicketPriority;
   user?: User;
   messages?: TicketMessage[];
 }
@@ -116,16 +119,4 @@ export interface TicketMessage {
   created_at: string;
   user?: User;
   ticket?: Ticket;
-}
-
-export interface ApiComentario extends Timestamps { // Definindo ApiComentario
-  id: number;
-  user_id: number;
-  product_id: number;
-  comment: string;
-  rating?: number; // Rating pode ser opcional
-  // Se o backend puder fornecer product_name, seria ótimo adicioná-lo aqui
-  // product_name?: string;
-  user?: User; // Relacionamento opcional com o usuário
-  produto?: Produto; // Relacionamento opcional com o produto
 }
