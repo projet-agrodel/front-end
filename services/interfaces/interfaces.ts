@@ -74,7 +74,6 @@ export interface Pedido extends Timestamps {
   amount: number;
   status: "Em Processamento" | "Não autorizado" | "Concluido";
   user_id: number;
-
   user?: User;
   payments?: Pagamento[];
   items?: PedidoItem[];

@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
+} from '@/app/_components/ui/dialog';
 
 interface AnalyticsCardProps {
   title: string;
