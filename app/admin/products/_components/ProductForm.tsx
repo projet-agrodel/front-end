@@ -260,12 +260,24 @@ export function ProductForm({
                             </div>
                             <div>
                                 <label htmlFor="category_id" className={labelBaseClass}>Categoria</label>
-                                <select name="category_id" id="category_id" value={formData.category_id || ''} onChange={handleChange} className={`${inputBaseClass} appearance-none`} disabled={isSubmitting}>
-                                    <option value="">Selecione uma categoria</option>
-                                    {categories.map(cat => (
-                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                <select 
+                                    name="category_id" 
+                                    id="category_id" 
+                                    value={formData.category_id || ''}
+                                    onChange={handleChange} 
+                                    className={`${inputBaseClass} appearance-none`}
+                                    disabled={isSubmitting || categories.length === 0}
+                                >
+                                    <option value="">{categories.length === 0 ? (isSubmitting ? "Carregando..." : "Nenhuma categoria disponível") : "Selecione uma categoria"}</option>
+                                    {categories.map(category => (
+                                        <option key={category.id} value={category.id}>
+                                            {category.name}
+                                        </option>
                                     ))}
                                 </select>
+                                {categories.length === 0 && !isSubmitting && (
+                                    <p className="mt-1 text-xs text-gray-500">Não há categorias cadastradas. Adicione categorias primeiro.</p>
+                                )}
                             </div>
                         </div>
 
