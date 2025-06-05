@@ -1,14 +1,14 @@
 'use client';
 
-import React from 'react';
-import { TrendingUp, ShoppingCart, Eye, CheckCircle, AlertOctagon, Zap, TrendingDown } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { TrendingUp, ShoppingCart, Eye, CheckCircle, AlertOctagon, Zap, TrendingDown, MailCheck, HelpCircle } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
+import { getTaxaConversaoDetails, TaxaConversaoDetailsData, FunnelStageData, OptimizationData } from '@/services/adminAnalyticsService';
+import { useSession } from 'next-auth/react';
 
-const funnelData = [
-  { stage: 'Visitantes', value: 12000, color: '#3b82f6' },         // Azul
-  { stage: 'Visualizaram Produto', value: 7500, color: '#22d3ee' }, // Ciano
-  { stage: 'Adicionaram Carrinho', value: 2500, color: '#a3e635' },// Verde claro
-  { stage: 'Concluíram Compra', value: 980, color: '#22c55e' },   // Verde
-];
+// Interfaces locais podem ser removidas se as do serviço forem suficientes ou renomeadas para evitar conflitos
+// interface FunnelStage { ... }
+// interface Optimization { ... }
 
 interface ConversionRate {
   from: string;
@@ -16,25 +16,105 @@ interface ConversionRate {
   rate: string;
 }
 
-// Calcular taxas de conversão entre etapas
-const conversionRates: ConversionRate[] = [];
-for (let i = 0; i < funnelData.length - 1; i++) {
-  const rate = (funnelData[i+1].value / funnelData[i].value) * 100;
-  conversionRates.push({
-    from: funnelData[i].stage,
-    to: funnelData[i+1].stage,
-    rate: rate.toFixed(1) + '%',
-  });
-}
-
-const mockOtimizacoes = [
-  { id: 1, texto: "Melhoria na velocidade de carregamento da página de produto (+5% conversão em Add to Cart)", tipo: "sucesso", icon: <Zap size={16} className="text-green-500" /> },
-  { id: 2, texto: "Checkout simplificado em 2 etapas resultou em +3% na finalização de compra.", tipo: "sucesso", icon: <Zap size={16} className="text-green-500" /> },
-  { id: 3, texto: "Investigar abandono de carrinho na etapa de seleção de frete.", tipo: "alerta", icon: <AlertOctagon size={16} className="text-yellow-500" /> },
-];
+// Função para mapear nome do ícone para componente Lucide
+const LucideIcon = ({ name, ...props }: { name: string; [key: string]: any }) => {
+  switch (name) {
+    case 'Zap': return <Zap {...props} />;
+    case 'AlertOctagon': return <AlertOctagon {...props} />;
+    case 'MailCheck': return <MailCheck {...props} />;
+    default: return <HelpCircle {...props} />;
+  }
+};
 
 const TaxaConversaoDetalhes: React.FC = () => {
-  const taxaConversaoGeral = ((funnelData[funnelData.length -1].value / funnelData[0].value) * 100).toFixed(2);
+  const [funnelData, setFunnelData] = useState<FunnelStageData[]>([]);
+  const [optimizations, setOptimizations] = useState<OptimizationData[]>([]);
+  const [conversionRates, setConversionRates] = useState<ConversionRate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const { data: session, status: sessionStatus } = useSession();
+  const token = session?.accessToken as string | undefined;
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (sessionStatus === 'loading') {
+        setLoading(true);
+        return;
+      }
+
+      if (!session || !token) {
+        setError("Usuário não autenticado ou token indisponível. Não é possível buscar os dados.");
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const data: TaxaConversaoDetailsData = await getTaxaConversaoDetails(token);
+        
+        setFunnelData(data.funnelData || []);
+        setOptimizations(data.optimizations || []);
+
+        if (data.funnelData && data.funnelData.length > 0) {
+          const rates: ConversionRate[] = [];
+          for (let i = 0; i < data.funnelData.length - 1; i++) {
+            const currentStageValue = data.funnelData[i].value;
+            const nextStageValue = data.funnelData[i+1].value;
+            if (currentStageValue > 0) {
+              const rate = (nextStageValue / currentStageValue) * 100;
+              rates.push({
+                from: data.funnelData[i].stage,
+                to: data.funnelData[i+1].stage,
+                rate: rate.toFixed(1) + '%',
+              });
+            } else {
+              rates.push({
+                from: data.funnelData[i].stage,
+                to: data.funnelData[i+1].stage,
+                rate: 'N/A',
+              });
+            }
+          }
+          setConversionRates(rates);
+        }
+
+      } catch (err) {
+        let errorMessage = "Ocorreu um erro desconhecido ao buscar dados da taxa de conversão.";
+        if (err instanceof Error) {
+          errorMessage = err.message;
+        } 
+        setError(errorMessage);
+        console.error("Erro ao buscar dados para TaxaConversaoDetalhes:", errorMessage, err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [session, token, sessionStatus]);
+
+  const taxaConversaoGeral = funnelData.length > 0 
+    ? ((funnelData[funnelData.length -1].value / funnelData[0].value) * 100).toFixed(2) 
+    : "0.00";
+
+  const totalConversoes = funnelData.length > 0 ? funnelData[funnelData.length -1].value : 0;
+  const visualizacoesProduto = funnelData.length > 1 ? funnelData[1].value : 0;
+  const carrinhosCriados = funnelData.length > 2 ? funnelData[2].value : 0;
+
+  if (loading) {
+    return <div className="p-6 text-center"><p>Carregando detalhes da taxa de conversão...</p></div>;
+  }
+
+  if (error) {
+    return <div className="p-6 text-center text-red-500"><p>Erro ao carregar dados: {error}</p></div>;
+  }
+  
+  if (funnelData.length === 0 && !loading) {
+    return <div className="p-6 text-center"><p>Não há dados de taxa de conversão disponíveis.</p></div>;
+  }
 
   return (
     <div className="space-y-6 p-1">
@@ -52,21 +132,21 @@ const TaxaConversaoDetalhes: React.FC = () => {
           <div className="p-3 bg-green-100 rounded-full"><CheckCircle size={24} className="text-green-600" /></div>
           <div>
             <p className="text-xs text-gray-500">Total Conversões (Período)</p>
-            <p className="text-xl font-bold text-gray-800">{funnelData[funnelData.length -1].value}</p>
+            <p className="text-xl font-bold text-gray-800">{totalConversoes.toLocaleString()}</p>
           </div>
         </div>
         <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-3 hover:bg-gray-50 transition-colors">
           <div className="p-3 bg-sky-100 rounded-full"><Eye size={24} className="text-sky-600" /></div>
           <div>
             <p className="text-xs text-gray-500">Visualizações de Produto</p>
-            <p className="text-xl font-bold text-gray-800">{funnelData[1].value.toLocaleString()}</p>
+            <p className="text-xl font-bold text-gray-800">{visualizacoesProduto.toLocaleString()}</p>
           </div>
         </div>
         <div className="bg-white p-5 rounded-lg shadow-lg flex items-center space-x-3 hover:bg-gray-50 transition-colors">
           <div className="p-3 bg-purple-100 rounded-full"><ShoppingCart size={24} className="text-purple-600" /></div>
           <div>
             <p className="text-xs text-gray-500">Carrinhos Criados</p>
-            <p className="text-xl font-bold text-gray-800">{funnelData[2].value.toLocaleString()}</p>
+            <p className="text-xl font-bold text-gray-800">{carrinhosCriados.toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -84,19 +164,19 @@ const TaxaConversaoDetalhes: React.FC = () => {
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-6">
                   <div 
-                    style={{ width: `${(item.value / funnelData[0].value) * 100}%`, backgroundColor: item.color }}
+                    style={{ width: `${funnelData[0] && funnelData[0].value > 0 ? (item.value / funnelData[0].value) * 100 : 0}%`, backgroundColor: item.color }}
                     className="h-6 rounded-full flex items-center justify-center text-white text-xs font-medium transition-all duration-500 ease-out"
                   >
-                    {((item.value / funnelData[0].value) * 100).toFixed(1)}%
+                    {funnelData[0] && funnelData[0].value > 0 ? ((item.value / funnelData[0].value) * 100).toFixed(1) : 0}%
                   </div>
                 </div>
-                {index < funnelData.length - 1 && (
+                {index < funnelData.length - 1 && conversionRates[index] && (
                   <div className="flex justify-end items-center mt-0.5 pr-2">
                     <TrendingDown size={12} className="text-gray-400 mr-1" />
                     <div className="mt-1 text-right">
                       <span className="text-xs text-gray-500 block">
-                        {conversionRates[index]?.rate} para &quot;{conversionRates[index]?.to}&quot;
-                      </span>
+                      {conversionRates[index]?.rate} para "{conversionRates[index]?.to}"
+                    </span>
                     </div>
                   </div>
                 )}
@@ -106,17 +186,25 @@ const TaxaConversaoDetalhes: React.FC = () => {
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-lg">
-          <h3 className="text-lg font-medium text-gray-700 mb-4">Otimizações e Alertas</h3>
+          <h3 className="text-lg font-medium text-gray-700 mb-4">Otimizações e Alertas (Backend)</h3>
           <div className="space-y-4">
-            {mockOtimizacoes.map(item => (
-              <div key={item.id} className={`p-4 rounded-md flex items-start space-x-3 ${item.tipo === 'sucesso' ? 'bg-green-50' : 'bg-yellow-50'}`}>
-                <div className={`mt-0.5 ${item.tipo === 'sucesso' ? 'text-green-600' : 'text-yellow-600'}`}>{item.icon}</div>
-                <p className={`text-sm ${item.tipo === 'sucesso' ? 'text-green-800' : 'text-yellow-800'}`}>{item.texto}</p>
+            {optimizations.length > 0 ? optimizations.map(item => (
+              <div key={item.id} className={`p-4 rounded-md flex items-start space-x-3 ${
+                item.tipo === 'sucesso' ? 'bg-green-50' : item.tipo === 'alerta' ? 'bg-yellow-50' : 'bg-blue-50'
+              }`}>
+                <div className={`mt-0.5 ${
+                  item.tipo === 'sucesso' ? 'text-green-600' : item.tipo === 'alerta' ? 'text-yellow-600' : 'text-blue-600'
+                }`}><LucideIcon name={item.iconName} size={16}/></div>
+                <p className={`text-sm ${
+                  item.tipo === 'sucesso' ? 'text-green-800' : item.tipo === 'alerta' ? 'text-yellow-800' : 'text-blue-800'
+                }`}>{item.texto}</p>
               </div>
-            ))}
+            )) : <p className='text-sm text-gray-500'>Nenhuma otimização ou alerta encontrado.</p>}
+            {optimizations.length > 0 && (
             <button className="w-full mt-2 text-sm text-indigo-600 hover:text-indigo-800 transition-colors py-2 rounded-md bg-indigo-50 hover:bg-indigo-100 font-medium">
               Ver todas as otimizações
             </button>
+            )}
           </div>
         </div>
       </div>

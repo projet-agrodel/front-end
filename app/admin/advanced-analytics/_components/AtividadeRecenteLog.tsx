@@ -1,28 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ShoppingCart, UserPlus, MessageSquare, CreditCard, Tag, Bell, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 interface Atividade {
   id: string;
   tipo: 'venda' | 'usuario' | 'ticket' | 'pagamento' | 'produto';
   descricao: string;
-  timestamp: Date;
+  timestamp: string; // Alterado para string para corresponder ao ISO format do backend
   detalhes?: Record<string, any>;
 }
 
-const mockAtividades: Atividade[] = [
-  { id: 'act001', tipo: 'venda', descricao: 'Nova venda #PED008 realizada', timestamp: new Date(Date.now() - 2 * 60 * 1000), detalhes: { cliente: 'Carlos M.', valor: 120.50 } },
-  { id: 'act002', tipo: 'usuario', descricao: 'Novo usuário registrado: Laura B.', timestamp: new Date(Date.now() - 15 * 60 * 1000) },
-  { id: 'act003', tipo: 'ticket', descricao: 'Ticket #TKT012 atualizado para: Resolvido', timestamp: new Date(Date.now() - 45 * 60 * 1000) },
-  { id: 'act004', tipo: 'pagamento', descricao: 'Pagamento confirmado para pedido #PED007', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000) },
-  { id: 'act005', tipo: 'produto', descricao: 'Produto "Queijo Minas Frescal" atualizado', timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000) },
-  { id: 'act006', tipo: 'venda', descricao: 'Nova venda #PED009 realizada', timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), detalhes: { cliente: 'Sofia R.', valor: 88.00 } },
-  { id: 'act007', tipo: 'usuario', descricao: 'Usuário Ricardo P. atualizou seu perfil.', timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000) },
-  { id: 'act008', tipo: 'ticket', descricao: 'Novo ticket #TKT015 aberto: Problema com entrega', timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000) },
-  { id: 'act009', tipo: 'venda', descricao: 'Nova venda #PED010 realizada', timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000), detalhes: { cliente: 'Julio C.', valor: 215.70 } },
-  { id: 'act010', tipo: 'produto', descricao: 'Novo produto adicionado: "Doce de Leite Artesanal" ', timestamp: new Date(Date.now() - 10 * 60 * 60 * 1000) },
-];
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const getIconeAtividade = (tipo: Atividade['tipo']) => {
   switch (tipo) {
@@ -35,7 +25,8 @@ const getIconeAtividade = (tipo: Atividade['tipo']) => {
   }
 };
 
-function formatTimeAgo(date: Date) {
+function formatTimeAgo(timestamp: string) {
+    const date = new Date(timestamp);
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
     let interval = seconds / 31536000; // anos
     if (interval > 1) return Math.floor(interval) + (Math.floor(interval) === 1 ? " ano atrás" : " anos atrás");
@@ -53,13 +44,71 @@ function formatTimeAgo(date: Date) {
 const ITEMS_PER_PAGE = 7;
 
 const AtividadeRecenteLog: React.FC = () => {
+  const { data: session, status } = useSession();
+  const [activities, setActivities] = useState<Atividade[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.ceil(mockAtividades.length / ITEMS_PER_PAGE);
 
-  const currentActivities = mockAtividades.slice(
+  const fetchActivities = useCallback(async () => {
+    if (status !== 'authenticated' || !session?.accessToken) {
+      setIsLoading(false);
+      setError("Usuário não autenticado ou sessão inválida.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_URL}/admin/analytics/recent-activities`, {
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
+        throw new Error(errorData.message || `Erro ao buscar atividades: ${response.status}`);
+      }
+
+      const data: Atividade[] = await response.json();
+      setActivities(data);
+    } catch (err) {
+      console.error("Erro ao buscar atividades recentes:", err);
+      setError(err instanceof Error ? err.message : 'Erro ao carregar atividades recentes.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [session, status]);
+
+  useEffect(() => {
+    fetchActivities();
+  }, [fetchActivities]);
+
+  const totalPages = Math.ceil(activities.length / ITEMS_PER_PAGE);
+
+  const currentActivities = activities.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-48">
+        <p className="text-gray-500">Carregando atividades...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-500 p-6">
+        <p>Erro ao carregar atividades: {error}</p>
+        <p>Por favor, tente novamente mais tarde.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-1">
@@ -132,4 +181,4 @@ const AtividadeRecenteLog: React.FC = () => {
   );
 };
 
-export default AtividadeRecenteLog; 
+export default AtividadeRecenteLog;

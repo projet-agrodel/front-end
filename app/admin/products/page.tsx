@@ -12,6 +12,7 @@ import {
     GetAdminProductsParams,
 } from '../../../services/adminProductService';
 import { getAuthTokenForAdmin } from '../../../utils/authAdmin';
+import { getCategories, Category } from '../../../services/categoryService';
 
 // Importar componentes refatorados
 import { ConfirmationModal } from './_components/ConfirmationModal';
@@ -37,16 +38,9 @@ interface ApiError {
     message?: string;
 }
 
-// Mock de categorias, idealmente viria do backend
-const MOCK_CATEGORIES = [
-    { id: 1, name: 'Eletrônicos' },
-    { id: 2, name: 'Roupas' },
-    { id: 3, name: 'Livros' },
-    { id: 4, name: 'Casa e Cozinha' },
-];
-
 export default function AdminProductsPage() {
     const [products, setProducts] = useState<PageDisplayProduct[]>([]);
+    const [realCategories, setRealCategories] = useState<Category[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -59,6 +53,27 @@ export default function AdminProductsPage() {
     const [isDeleting, setIsDeleting] = useState(false);
 
     // const { toast } = useToast(); // Para notificações futuras
+
+    const fetchPageCategories = useCallback(async () => {
+        const token = await getAuthTokenForAdmin();
+        if (!token && !process.env.NEXT_PUBLIC_CATEGORIES_ARE_PUBLIC) {
+             console.warn("Token não disponível para buscar categorias, e elas não são públicas.");
+             return;
+        }
+
+        try {
+            const categoryData = await getCategories(1, 200, '');
+            setRealCategories(categoryData.categories || []);
+        } catch (catErr) {
+            console.error("Erro ao buscar categorias para o formulário:", catErr);
+            const apiCatError = catErr as ApiError;
+            setError(prev => {
+                const catErrorMessage = apiCatError.message || "Falha ao carregar categorias para o formulário.";
+                return prev ? `${prev}\n${catErrorMessage}` : catErrorMessage;
+            });
+            setRealCategories([]);
+        }
+    }, []);
 
     const fetchProducts = useCallback(async () => {
         setIsLoading(true);
@@ -99,7 +114,8 @@ export default function AdminProductsPage() {
 
     useEffect(() => {
         fetchProducts();
-    }, [fetchProducts]);
+        fetchPageCategories();
+    }, [fetchProducts, fetchPageCategories]);
 
     const filteredProducts = useMemo(() => {
         if (!searchTerm) return products;
@@ -366,7 +382,7 @@ export default function AdminProductsPage() {
                         onClose={handleCloseForm} 
                         onSubmitSuccess={handleFormSuccess} 
                         initialData={editingProduct as FormDisplayProduct | null} // Cast para o tipo esperado pelo formulário
-                        categories={MOCK_CATEGORIES} 
+                        categories={realCategories.map(cat => ({ id: Number(cat.id), name: cat.name }))} // Passar categorias reais
                         createProductFn={createAdminProduct} 
                         updateProductFn={updateAdminProduct} 
                     />
