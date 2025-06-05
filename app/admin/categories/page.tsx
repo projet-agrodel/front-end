@@ -313,7 +313,7 @@ export default function AdminCategoriesPage() {
                 </p>
               </div>
 
-              <div>
+    <div>
                 <Label htmlFor="description">Descrição (Opcional)</Label>
                 <div className="mt-2">
                     <Textarea 
