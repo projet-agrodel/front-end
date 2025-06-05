@@ -8,8 +8,6 @@ import {
 // Importar ícones reais
 import { DollarSign, ShoppingBag, Users, Archive } from 'lucide-react'; 
 
-// --- Simulação de busca de dados ---
-// Substitua esta função pela sua lógica real de busca de dados (API, banco de dados, etc.)
 async function getAdminDashboardData() {
   // Simula um pequeno atraso de rede
   await new Promise(resolve => setTimeout(resolve, 50));
@@ -39,9 +37,7 @@ async function getAdminDashboardData() {
     ]
   };
 }
-// --- Fim da simulação ---
 
-// Componente de Card - Estilo ajustado
 interface MetricCardProps {
   title: string;
   value: string | number;

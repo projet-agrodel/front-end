@@ -6,13 +6,11 @@ import { getSalesByCategory, SalesByCategoryData } from '../../../../services/ad
 import { getAuthTokenForAdmin } from '../../../../utils/authAdmin';
 import { Loader2, AlertTriangle, Package } from 'lucide-react';
 
-// Cores para as fatias do gráfico de pizza
 const COLORS = [
   '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', 
   '#FF4560', '#775DD0', '#00E396', '#FEB019', '#26A69A'
 ];
 
-// Simplificando a tipagem para ActiveShapeProps, focando no essencial
 interface ActiveShapePropsFromRecharts {
   cx: number;
   cy: number;
@@ -21,26 +19,23 @@ interface ActiveShapePropsFromRecharts {
   startAngle: number;
   endAngle: number;
   fill: string;
-  payload: { // O payload aqui é o item de dados original passado para o <Pie data={data} />
+  payload: { 
     categoryName: string;
     totalSales: number;
     transactionCount: number; 
-    // Outros campos do SalesByCategoryData estarão aqui
   };
   percent: number;
-  // Outras props que o Recharts pode passar
-  [key: string]: any; 
+  [key: string]: unknown; 
 }
 
-const renderActiveShape = (props: ActiveShapePropsFromRecharts) => {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent } = props;
+const renderActiveShape = (props: unknown): React.ReactElement => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent } = props as ActiveShapePropsFromRecharts;
 
-  // Adicionando checagens para garantir que os valores numéricos principais existem
   if (typeof cx !== 'number' || typeof cy !== 'number' || 
       typeof innerRadius !== 'number' || typeof outerRadius !== 'number' || 
       typeof startAngle !== 'number' || typeof endAngle !== 'number' || 
       !payload || typeof percent !== 'number') {
-    return null;
+    return <g />;
   }
 
   return (
@@ -76,25 +71,29 @@ export default function SalesByCategoryChart() {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
-      const token = getAuthTokenForAdmin();
+      const token = await getAuthTokenForAdmin();
       if (!token) {
         setError('Autenticação necessária.');
         setLoading(false);
         return;
       }
       try {
-        const result = await getSalesByCategory(token);
+        const result = await getSalesByCategory(token as unknown as string);
         const sortedData = [...result].sort((a, b) => b.totalSales - a.totalSales);
         setData(sortedData);
-      } catch (err: any) { // Manter any para err por enquanto para evitar problemas com tipo desconhecido
-        setError(err.message || 'Falha ao buscar dados de vendas por categoria.');
+      } catch (err: unknown) { 
+        if (err instanceof Error) {
+          setError(err.message || 'Falha ao buscar dados de vendas por categoria.');
+        } else {
+          setError('Ocorreu um erro desconhecido ao buscar dados de vendas por categoria.');
+        }
       }
       setLoading(false);
     };
     fetchData();
   }, []);
 
-  const onPieEnter = (_: any, index: number) => {
+  const onPieEnter = (_: unknown, index: number) => {
     setActiveIndex(index);
   };
 
@@ -132,7 +131,6 @@ export default function SalesByCategoryChart() {
       <PieChart>
         <Pie
           activeIndex={activeIndex}
-          // @ts-expect-error Recharts pode ter tipagem complexa para activeShape, usando expect-error para prosseguir
           activeShape={renderActiveShape} 
           data={data}
           cx="50%"
@@ -160,7 +158,6 @@ export default function SalesByCategoryChart() {
             itemStyle={{ fontSize: '13px' }}
             formatter={(value: number, name: string, props: { payload?: { payload: SalesByCategoryData, percent?: number } }) => {
                 if (!props.payload || !props.payload.payload) return [null, null];
-                // Acessando diretamente do payload do item de dados original
                 const itemData = props.payload.payload;
                 const percentage = props.payload.percent ? (props.payload.percent * 100).toFixed(1) : '0';
                 const formattedValue = itemData.totalSales.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -177,10 +174,9 @@ export default function SalesByCategoryChart() {
             align="center" 
             iconSize={10}
             wrapperStyle={{ paddingTop: '20px', paddingBottom: '10px', fontSize: '13px' }}
-            formatter={(value, entry: any) => { 
-                const { color } = entry;
-                const itemPayload = entry.payload?.payload; // Acessando o payload do item de dados
-                const percentage = itemPayload?.percent; // Recharts aninha o percent aqui
+            formatter={(value: string, entry: any) => { 
+                const { color, payload: entryPayload } = entry;
+                const percentage = entryPayload?.percent as number | undefined;
                 const displayPercentage = typeof percentage === 'number' ? `(${(percentage * 100).toFixed(1)}%)` : '';
                 return <span style={{ color: color || '#333' }}>{value} {displayPercentage}</span>;
             }}

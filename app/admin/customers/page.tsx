@@ -4,36 +4,59 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Users, Search } from 'lucide-react'; // Ícone exemplo e Search
 import { useRouter } from 'next/navigation'; // Importar useRouter
 
-// --- Simulação de busca de dados de clientes ---
-// Substitua pela sua lógica real
-async function getCustomersData(): Promise<Customer[]> {
-  await new Promise(resolve => setTimeout(resolve, 50)); // Simula atraso
-
-  // Dados fictícios
-  return [
-    { id: 'usr_1', name: 'João Silva', email: 'joao.silva@example.com', registrationDate: '2024-05-10T10:30:00Z', status: 'Ativo' },
-    { id: 'usr_2', name: 'Maria Oliveira', email: 'maria.oliveira@sample.net', registrationDate: '2024-04-22T15:00:00Z', status: 'Ativo' },
-    { id: 'usr_3', name: 'Carlos Souza', email: 'carlos.souza@domain.org', registrationDate: '2024-03-15T09:12:00Z', status: 'Bloqueado' },
-    { id: 'usr_4', name: 'Ana Pereira', email: 'ana.p@mail.co', registrationDate: '2024-06-01T11:05:00Z', status: 'Ativo' },
-    { id: 'usr_5', name: 'Pedro Costa', email: 'pedro.costa@email.com', registrationDate: '2024-02-28T18:45:00Z', status: 'Ativo' },
-    { id: 'usr_6', name: 'Luísa Martins', email: 'luisa.m@example.com', registrationDate: '2024-07-11T14:20:00Z', status: 'Bloqueado' },
-    // Adicionar mais dados para testar paginação
-    { id: 'usr_7', name: 'Ricardo Alves', email: 'ricardo.a@example.com', registrationDate: '2024-07-15T08:00:00Z', status: 'Ativo' },
-    { id: 'usr_8', name: 'Sofia Ferreira', email: 'sofia.f@sample.net', registrationDate: '2024-07-18T11:30:00Z', status: 'Ativo' },
-    { id: 'usr_9', name: 'Bruno Gomes', email: 'bruno.g@domain.org', registrationDate: '2024-07-20T16:45:00Z', status: 'Bloqueado' },
-    { id: 'usr_10', name: 'Clara Dias', email: 'clara.d@mail.co', registrationDate: '2024-07-22T09:15:00Z', status: 'Ativo' },
-    { id: 'usr_11', name: 'Daniel Lima', email: 'daniel.l@email.com', registrationDate: '2024-07-25T13:00:00Z', status: 'Ativo' },
-  ];
+// Interface para o tipo de usuário vindo da API
+interface ApiUser {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  type: 'admin' | 'user';
+  created_at: string;
+  updated_at: string;
 }
-// --- Fim da simulação ---
+
+async function getCustomersData(): Promise<Customer[]> {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users?type=user`);
+
+    if (!response.ok) {
+      console.error("Erro ao buscar clientes:", response.status, response.statusText);
+      // Lançar um erro ou retornar um array vazio pode ser mais apropriado
+      // dependendo de como você quer tratar erros na UI.
+      return [];
+    }
+    const usersFromApi: ApiUser[] = await response.json();
+
+    if (!Array.isArray(usersFromApi)) {
+      console.error("Resposta da API não é um array:", usersFromApi);
+      return [];
+    }
+
+    // Mapear os dados da API para a interface Customer
+    return usersFromApi.map((user: ApiUser) => ({
+      id: String(user.id), // Backend envia como número, frontend usa string
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      registrationDate: user.created_at, 
+      status: 'Ativo', 
+      type: user.type, 
+    }));
+  } catch (error) {
+    console.error("Falha ao buscar dados dos clientes:", error);
+    return []; 
+  }
+}
 
 // Tipagem para os dados do cliente
 interface Customer {
   id: string;
   name: string;
   email: string;
+  phone?: string; // Campo opcional adicionado
   registrationDate: string;
   status: 'Ativo' | 'Bloqueado';
+  type: 'admin' | 'user'; // Campo adicionado
 }
 
 // Componente da Tabela de Clientes
