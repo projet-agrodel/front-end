@@ -17,7 +17,7 @@ interface ApiUser {
 
 async function getCustomersData(): Promise<Customer[]> {
   try {
-    const response = await fetch(`http://localhost:5000/api/users?type=user`);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users?type=user`);
 
     if (!response.ok) {
       console.error("Erro ao buscar clientes:", response.status, response.statusText);

@@ -180,7 +180,12 @@ export default function AdvancedAnalyticsPage() {
         trend: loadingOrders || !totalOrdersSummary ? "" : `${totalOrdersSummary.trend_percentage.toFixed(1)}%`, 
         trendDirection: loadingOrders || !totalOrdersSummary ? "neutral" : totalOrdersSummary.trend_direction
       },
-      chart: <MiniBarChart data={totalOrdersSummary?.weekday_orders_chart.map(d => d.orders) || weekdayData} color="#FFFFFF" />,
+chart: (
+  <MiniBarChart 
+    data={totalOrdersSummary?.weekday_orders_chart?.map(d => d.orders) || weekdayData} 
+    color="#FFFFFF" 
+  />
+)
       modalContent: <TotalPedidosDetalhes />,
       modalDescription: "Análise detalhada dos pedidos com dados reais do backend."
     },

@@ -122,6 +122,19 @@ export function ProductForm({
         setFormData((prev) => ({ ...prev, [name]: processedValue }));
     };
 
+    const validateFormData = (data: CreateAdminProductPayload): string | null => {
+        if (!data.name || data.price <= 0) {
+            return "Nome do produto e preço (maior que zero) são obrigatórios.";
+        }
+        if (data.isPromotion && (!data.originalPrice || data.originalPrice <= data.price)) {
+            return "Em promoção, o preço original deve ser informado e ser maior que o preço promocional.";
+        }
+        if (data.stock < 0) {
+             return "Estoque não pode ser negativo.";
+        }
+        return null; 
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -146,20 +159,11 @@ export function ProductForm({
             originalPrice: formData.isPromotion ? (Number(formData.originalPrice) || null) : null, 
         };
 
-        if (!basePayload.name || basePayload.price <= 0) {
-            setError("Nome do produto e preço (maior que zero) são obrigatórios.");
+        const validationError = validateFormData(basePayload);
+        if (validationError) {
+            setError(validationError);
             setIsSubmitting(false);
             return;
-        }
-        if (basePayload.isPromotion && (!basePayload.originalPrice || basePayload.originalPrice <= basePayload.price)) {
-            setError("Em promoção, o preço original deve ser informado e ser maior que o preço promocional.");
-            setIsSubmitting(false);
-            return;
-        }
-        if (basePayload.stock < 0) {
-             setError("Estoque não pode ser negativo.");
-             setIsSubmitting(false);
-             return;
         }
 
         try {
@@ -318,11 +322,10 @@ export function ProductForm({
                     </motion.button>
                     <motion.button 
                         type="submit" 
-                        onClick={handleSubmit} 
                         className="px-7 py-3 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-lg text-sm font-semibold hover:from-green-600 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-150 ease-in-out shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-wait"
                         whileHover={{ scale: 1.03, y: -1 }}
                         whileTap={{ scale: 0.98, y: 0 }}
-                        disabled={isSubmitting || !!successMessage} // Desabilitar também se mensagem de sucesso estiver visível
+                        disabled={isSubmitting || !!successMessage}
                     >
                         {isSubmitting ? (
                             <span className="flex items-center justify-center">
