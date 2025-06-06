@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🐳 Projeto Agrodrel
 
-## Getting Started
+Este projeto é composto por dois repositórios separados:
 
-First, run the development server:
+- **Frontend** (`front`)
+- **Backend** (`back`)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+## 📁 Estrutura de Diretórios
+
+A estrutura esperada após clonar e organizar os repositórios é a seguinte:
+
+```
+agrodrel/
+├── back-end/
+├── front-end/
+└── docker-compose.yml
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🚀 Passo a Passo
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Clone os Repositórios
 
-## Learn More
+Crie uma pasta principal para o projeto e entre nela:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+mkdir agrodrel
+cd agrodrel
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Clone os dois repositórios dentro dessa pasta:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+git clone https://github.com/projet-agrodel/front-end front-end
+git clone https://github.com/projet-agrodel/back-end back-end
+```
 
-## Deploy on Vercel
+> 📝 Substitua os links acima pelos repositórios reais.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 2. Mova o `docker-compose.yml` que está na pasta end para a raiz
+
+O arquivo `docker-compose.yml` estiver dentro da pasta `front/`, mova-o para a raiz da pasta principal:
+
+```bash
+mv front/docker-compose.yml .
+```
+
+---
+
+### 3. Inicie os Containers
+
+Com tudo organizado, execute o seguinte comando na raiz do projeto:
+
+```bash
+docker-compose up --build
+```
+
+Esse comando irá:
+
+- Construir as imagens do frontend e backend e banco de dados
+- Subir os containers
+- Expor as portas configuradas no `docker-compose.yml`
+
+---
+
+## ✅ Acesso aos Serviços
+
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- Backend: [http://localhost:5000](http://localhost:5000)
+- Banco de Dados: [http://localhost:5432](http://localhost:5432)
+
+## 🛠️ Observações
+
+- Verifique se as portas 3000 (frontend) e 5000 e 5432 (backend) estão livres no seu sistema.
+- Se necessário, edite o `docker-compose.yml` para ajustar caminhos de build e nomes de serviços.
+- Se tiver o Postgres instalado na sua máquina, desative seu serviço caso o container do banco de dados não subir.

@@ -69,7 +69,7 @@ const RegisterPage = () => {
           name: data.name,
           email: data.email,
           password: data.password,
-          type: 'admin'
+          type: 'user'
         }),
       });
 

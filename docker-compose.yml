@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: agrodel
+      POSTGRES_PASSWORD: agrodel
+      POSTGRES_DB: agrodel
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./back-end
+    container_name: backend
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    ports:
+      - "5000:5000"
+    command: python run.py
+    volumes:
+      - ./back-end:/app
+
+  frontend:
+    build: ./front-end
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./front-end:/app
+      - /app/node_modules
+      - ./front-end/.env:/app/.env
+
+volumes:
+  postgres_data:
