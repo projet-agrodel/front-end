@@ -40,7 +40,7 @@ export default function AdminTicketPage() {
   const { data: ticket, isLoading: isLoadingTicket } = useQuery<Ticket>({
     queryKey: ['ticket', ticketId],
     queryFn: async () => {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tickets/${ticketId}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tickets/${ticketId}`);
       if (!response.ok) throw new Error('Erro ao carregar ticket');
       return response.json();
     },

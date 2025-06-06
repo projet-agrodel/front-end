@@ -277,7 +277,8 @@ const CarrinhoPage = () => {
       );
 
       if (!orderResponse.ok) {
-        throw new Error("Erro ao criar o pedido");
+        const error = await orderResponse.json()
+        throw new Error(error.message);
       }
 
       await clearCart();
@@ -316,11 +317,11 @@ const CarrinhoPage = () => {
       // window.open(payment.api.init_point, "_blank");
       
       // 5. Redirecionar para a página do pedido
-      router.push(`/pedidos/${order.id}`);
+      router.push(`/pedidos/${order.id}`); 
     } catch (error) {
       console.error("Erro ao processar pagamento:", error);
       alert(
-        "Ocorreu um erro ao processar o pagamento. Por favor, tente novamente."
+        "Ocorreu um erro ao processar o pagamento. Por favor, tente novamente." + (error as Error).message
       );
     } finally {
       setIsProcessing(false);

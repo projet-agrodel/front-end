@@ -82,8 +82,11 @@ export function TicketForm({ onSubmit, initialData, isLoading }: TicketFormProps
             <Label htmlFor="priority">Prioridade</Label>
             <Select
               value={formData.priority}
-              onChange={e => handlePriorityChange(e.target.value)}
+              onValueChange={handlePriorityChange}
             >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a prioridade" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Baixa">Baixa</SelectItem>
                 <SelectItem value="Média">Média</SelectItem>

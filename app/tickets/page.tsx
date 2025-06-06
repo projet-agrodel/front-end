@@ -56,7 +56,7 @@ export default function TicketsPage() {
         </div>
         <Button
           onClick={() => router.push('/tickets/create')}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 bg-green-600"
         >
           <PlusIcon className="h-4 w-4" />
           Novo Ticket
