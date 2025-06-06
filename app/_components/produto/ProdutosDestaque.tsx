@@ -12,10 +12,10 @@ const ProdutosDestaque = () => {
   const { data: produtos, isLoading } = useQuery<Produto[]>({
     queryKey: ["produtos"],
     queryFn: async () => {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/produtos/all`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/products/all`);
       const data = await response.json();
       
-      return data
+      return data.products
     },
   });
 

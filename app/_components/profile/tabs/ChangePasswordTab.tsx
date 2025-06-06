@@ -5,7 +5,7 @@ import { Lock, Eye, EyeOff } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import PasswordCriteriaPopup from '../../register/PasswordCriteriaPopup';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Definir interface para os critérios da nova senha
 interface NewPasswordCriteria {

@@ -69,7 +69,7 @@ export default function PedidosPage() {
     queryKey: ["pedidos", session?.user?.id, search, status],
     queryFn: async () => {
       const response = await fetch(
-        `http://localhost:5000/api/orders?user_id=${session?.user?.id}&search=${search}&status=${status}`
+        `${process.env.NEXT_PUBLIC_API_URL}/api/orders?user_id=${session?.user?.id}&search=${search}&status=${status}`
       );
       if (!response.ok) throw new Error("Erro ao carregar pedidos");
       return response.json();
@@ -139,7 +139,7 @@ export default function PedidosPage() {
           </Card>
         ) : (
           pedidos?.map((pedido) => (
-            <Link href={`/pedidos/${pedido.id}`} key={pedido.id}>
+            <Link href={`/pedidos/${pedido.id}`} key={`${session?.user.id}-${pedido.id}`}>
               <Card
                 className="hover:shadow-lg transition-all duration-300 border-l-4 mb-4"
                 style={{

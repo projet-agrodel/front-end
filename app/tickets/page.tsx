@@ -33,7 +33,7 @@ export default function TicketsPage() {
   const { data: tickets, isLoading } = useQuery({
     queryKey: ['userTickets'],
     queryFn: async () => {
-      const response = await fetch(`http://localhost:5000/api/tickets/user/${session?.user.id}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tickets/user/${session?.user.id}`);
       if (!response.ok) throw new Error('Erro ao carregar tickets');
       return response.json();
     },

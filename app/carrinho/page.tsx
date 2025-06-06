@@ -107,6 +107,7 @@ const CartItemDisplay: React.FC<{
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pendingQuantityRef = useRef<number | null>(null);
   const isUpdatingRef = useRef(false);
+  const { data: session } = useSession();
 
   const handleRemoveItem = useCallback(
     async (productId: number) => {
@@ -260,50 +261,59 @@ const CarrinhoPage = () => {
     try {
       setIsProcessing(true);
 
-      const orderResponse = await fetch("http://localhost:5000/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user_id: session?.user.id,
-          items: cartItems,
-        }),
-      });
-
-      if (!orderResponse.ok) {
-        throw new Error("Erro ao criar o pedido");
-      }
-
-      const { order } = await orderResponse.json();
-
-      
-      const paymentResponse = await fetch(
-        `http://localhost:5000/api/payments`,
+      const orderResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/orders`,
         {
           method: "POST",
           headers: {
+            'Authorization': `Bearer ${session?.accessToken}`,
             "Content-Type": "application/json",
           },
-
           body: JSON.stringify({
-            order_id: order.id,
-            amount: order.amount,
-            payment_method: data.payment_method,
+            user_id: session?.user.id,
             items: cartItems,
           }),
         }
       );
 
-      const data_payament = await paymentResponse.json();
+      if (!orderResponse.ok) {
+        throw new Error("Erro ao criar o pedido");
+      }
 
-      console.log(data_payament)
+      await clearCart();
 
-      // 3. Limpar o carrinho
-      //await clearCart();
+      const { order } = await orderResponse.json();
 
-      // 4. Abrir o link de pagamento em uma nova aba
-      window.open(data_payament.api.init_point, '_blank');
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ 'status': 'Concluido' }),
+        headers: {
+          'Authorization': `Bearer ${session?.accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      // const paymentResponse = await fetch(
+      //     `${process.env.NEXT_PUBLIC_API_URL}/api/payments`,
+      //     {
+      //       method: "POST",
+      //       headers: {
+      //         'Authorization': `Bearer ${session?.accessToken}`,
+      //         "Content-Type": "application/json",
+      //       },
+  
+      //       body: JSON.stringify({
+      //         order_id: order.id,
+      //         amount: order.amount,
+      //         payment_method: data.payment_method,
+      //         items: cartItems,
+      //       }),
+      //     }
+      //   );
+
+      // const payment = await paymentResponse.json()
+  
+      // window.open(payment.api.init_point, "_blank");
       
       // 5. Redirecionar para a página do pedido
       router.push(`/pedidos/${order.id}`);

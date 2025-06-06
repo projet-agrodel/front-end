@@ -1,148 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Produto } from '@/services/interfaces/interfaces';
-import { ArrowLeftIcon } from 'lucide-react';
+import { ArrowLeftIcon, AlertTriangle } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
-
-// Dados fictícios (Deverá ser substituído por chamadas de API depois)
-const produtosMock: Produto[] = [
-  {
-    id: 1,
-    name: 'Fertilizante Orgânico',
-    price: 45.99,
-    description: 'Fertilizante orgânico de alta qualidade para todos os tipos de plantas.',
-    img: '/img/produtos/fertilizante-organico.jpg',
-    stock: 50,
-    created_at: '',
-    updated_at: '',
-    category: { id: 1, name: 'Fertilizantes', created_at: '', updated_at: '' }
-  },
-  {
-    id: 2,
-    name: 'Semente de Alface',
-    price: 12.50,
-    description: 'Sementes de alface crespa de alta germinação, pacote com 100 unidades.',
-    img: '/img/produtos/semente-alface.jpg',
-    stock: 120,
-    created_at: '',
-    updated_at: '',
-    category: { id: 2, name: 'Sementes', created_at: '', updated_at: '' }
-  },
-  {
-    id: 3,
-    name: 'Regador Manual 5L',
-    price: 29.90,
-    description: 'Regador manual com capacidade para 5 litros, ideal para jardins e hortas.',
-    img: '/img/produtos/regador-manual.jpg',
-    stock: 35,
-    created_at: '',
-    updated_at: '',
-    category: { id: 3, name: 'Ferramentas', created_at: '', updated_at: '' }
-  },
-  {
-    id: 4,
-    name: 'Herbicida Natural',
-    price: 38.75,
-    description: 'Herbicida natural à base de extratos vegetais, não agride o meio ambiente.',
-    img: '/img/produtos/herbicida-natural.jpg',
-    stock: 45,
-    created_at: '',
-    updated_at: '',
-    category: { id: 4, name: 'Defensivos', created_at: '', updated_at: '' }
-  },
-  {
-    id: 5,
-    name: 'Substrato para Plantas',
-    price: 18.99,
-    description: 'Substrato de alta qualidade para vasos e jardins, embalagem de 5kg.',
-    img: '/img/produtos/substrato-plantas.jpg',
-    stock: 80,
-    created_at: '',
-    updated_at: '',
-    category: { id: 5, name: 'Substratos', created_at: '', updated_at: '' }
-  },
-  {
-    id: 6,
-    name: 'Kit Ferramentas de Jardim',
-    price: 89.90,
-    description: 'Kit completo com 5 ferramentas essenciais para jardinagem.',
-    img: '/img/produtos/kit-ferramentas.jpg',
-    stock: 25,
-    created_at: '',
-    updated_at: '',
-    category: { id: 3, name: 'Ferramentas', created_at: '', updated_at: '' }
-  },
-  {
-    id: 7,
-    name: 'Fertilizante NPK 10-10-10',
-    price: 52.80,
-    description: 'Fertilizante mineral balanceado para desenvolvimento completo das plantas.',
-    img: '/img/produtos/fertilizante-npk.jpg',
-    stock: 65,
-    created_at: '',
-    updated_at: '',
-    category: { id: 1, name: 'Fertilizantes', created_at: '', updated_at: '' }
-  },
-  {
-    id: 8,
-    name: 'Sementes de Tomate Cereja',
-    price: 15.99,
-    description: 'Sementes selecionadas de tomate cereja, alta produtividade.',
-    img: '/img/produtos/semente-tomate.jpg',
-    stock: 90,
-    created_at: '',
-    updated_at: '',
-    category: { id: 2, name: 'Sementes', created_at: '', updated_at: '' }
-  },
-  {
-    id: 9,
-    name: 'Pulverizador 2L',
-    price: 35.50,
-    description: 'Pulverizador manual com capacidade de 2 litros para aplicação de defensivos.',
-    img: '/img/produtos/pulverizador.jpg',
-    stock: 40,
-    created_at: '',
-    updated_at: '',
-    category: { id: 3, name: 'Ferramentas', created_at: '', updated_at: '' }
-  },
-  {
-    id: 10,
-    name: 'Inseticida Biológico',
-    price: 42.99,
-    description: 'Inseticida à base de Bacillus thuringiensis, controle biológico de pragas.',
-    img: '/img/produtos/inseticida-biologico.jpg',
-    stock: 30,
-    created_at: '',
-    updated_at: '',
-    category: { id: 4, name: 'Defensivos', created_at: '', updated_at: '' }
-  },
-  {
-    id: 11,
-    name: 'Substrato para Cactos',
-    price: 22.50,
-    description: 'Substrato especial para cactos e suculentas, drenagem ideal.',
-    img: '/img/produtos/substrato-cactos.jpg',
-    stock: 55,
-    created_at: '',
-    updated_at: '',
-    category: { id: 5, name: 'Substratos', created_at: '', updated_at: '' }
-  },
-  {
-    id: 12,
-    name: 'Pá de Jardinagem',
-    price: 18.75,
-    description: 'Pá de jardinagem com cabo ergonômico, ideal para transplantes.',
-    img: '/img/produtos/pa-jardinagem.jpg',
-    stock: 60,
-    created_at: '',
-    updated_at: '',
-    category: { id: 3, name: 'Ferramentas', created_at: '', updated_at: '' }
-  }
-];
+import { useQuery } from '@tanstack/react-query';
+import { getProductById } from '@/services/productService';
 
 // Função para obter uma cor baseada na categoria do produto
 const getCategoryColor = (categoria: string | undefined | null): string => {
@@ -160,24 +26,14 @@ const getCategoryColor = (categoria: string | undefined | null): string => {
 export default function DetalhesProduto() {
   const params = useParams();
   const router = useRouter();
-  const useCartContext = useCart()
-  const [produto, setProduto] = useState<Produto | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const useCartContext = useCart();
   const [quantidade, setQuantidade] = useState(1);
   const [adicionadoAoCarrinho, setAdicionadoAoCarrinho] = useState(false);
   
-  useEffect(() => {
-    const produtoId = parseInt(params.id as string);
-    
-    // Buscar produto pelos dados mockados (substituir por API)
-    const produtoEncontrado = produtosMock.find(p => p.id === produtoId);
-    
-    if (produtoEncontrado) {
-      setProduto(produtoEncontrado);
-    }
-    
-    setIsLoading(false);
-  }, [params.id]);
+  const { data: produto, isLoading, error } = useQuery({
+    queryKey: ['product', params.id],
+    queryFn: () => getProductById(params.id as string),
+  });
   
   const handleAdicionarAoCarrinho = () => {
     if (!produto) return;
@@ -215,6 +71,20 @@ export default function DetalhesProduto() {
     );
   }
   
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Erro ao carregar produto</h2>
+          <p className="text-gray-600 mb-6">{error instanceof Error ? error.message : 'Ocorreu um erro ao carregar o produto.'}</p>
+          <Link href="/produtos" className="bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded-md">
+            Voltar para produtos
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  
   if (!produto) {
     return (
       <div className="container mx-auto px-4 py-12">
@@ -224,6 +94,81 @@ export default function DetalhesProduto() {
           <Link href="/produtos" className="bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded-md">
             Voltar para produtos
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Verificar se o produto está indisponível
+  if (produto.stock <= 0) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="mb-6">
+          <button 
+            onClick={() => router.back()} 
+            className="flex items-center text-gray-600 hover:text-green-700"
+          >
+            <ArrowLeftIcon className="w-4 h-4 mr-2" />
+            <span>Voltar</span>
+          </button>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            <div className={`${categoryColor} p-8 flex items-center justify-center min-h-[300px]`}>
+              {produto.imageUrl ? (
+                <div className="relative w-full h-[300px]">
+                  <Image
+                    src={produto.imageUrl}
+                    alt={produto.name}
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="text-white text-2xl font-bold">Sem imagem</div>
+              )}
+            </div>
+            
+            <div className="p-8">
+              <div className="mb-6">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">{produto.name}</h1>
+                <div className="flex items-center space-x-2">
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium text-white ${categoryColor}`}>
+                    {produto.category?.name}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">Produto Indisponível</h3>
+                    <div className="mt-2 text-sm text-red-700">
+                      <p>Este produto está temporariamente fora de estoque.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-800 mb-2">Descrição</h2>
+                <p className="text-gray-600">{produto.description}</p>
+              </div>
+
+              <div className="flex justify-center">
+                <Link 
+                  href="/produtos" 
+                  className="bg-green-600 hover:bg-green-700 text-white py-3 px-8 rounded-lg font-medium transition-colors duration-200"
+                >
+                  Ver outros produtos
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -246,83 +191,84 @@ export default function DetalhesProduto() {
         <div className="grid grid-cols-1 md:grid-cols-2">
           {/* Imagem do produto */}
           <div className={`${categoryColor} p-8 flex items-center justify-center min-h-[300px]`}>
-            {produto.img ? (
+            {produto.imageUrl ? (
               <div className="relative w-full h-[300px]">
-                <Image 
-                  src={produto.img} 
-                  alt={produto.name} 
-                  fill 
-                  style={{ objectFit: 'contain' }} 
-                  className="p-4"
+                <Image
+                  src={produto.imageUrl}
+                  alt={produto.name}
+                  fill
+                  className="object-contain"
                 />
               </div>
             ) : (
-              <div className="text-white text-center">
-                <span className="text-2xl font-bold mb-2">{produto.category?.name}</span>
-                <p>{produto.name}</p>
-              </div>
+              <div className="text-white text-2xl font-bold">Sem imagem</div>
             )}
           </div>
           
-          {/* Detalhes do produto */}
+          {/* Informações do produto */}
           <div className="p-8">
-            <div className="mb-4">
-              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold text-white ${categoryColor}`}>
-                {produto.category?.name}
-              </span>
-            </div>
-            
-            <h1 className="text-3xl font-bold text-gray-800 mb-4">{produto.name}</h1>
-            
             <div className="mb-6">
-              <span className="text-4xl font-bold text-green-600">
-                R$ {produto.price.toFixed(2).replace('.', ',')}
-              </span>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">{produto.name}</h1>
+              <div className="flex items-center space-x-2">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium text-white ${categoryColor}`}>
+                  {produto.category?.name}
+                </span>
+              </div>
             </div>
             
             <div className="mb-6">
-              <p className="text-gray-600">{produto.description}</p>
-            </div>
-            
-            <div className="mb-6">
-              <p className="text-sm text-gray-500">
-                Disponibilidade: <span className="font-semibold text-gray-700">{produto.stock} em estoque</span>
+              <div className="flex items-baseline space-x-2">
+                <span className="text-3xl font-bold text-gray-900">
+                  {produto.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </span>
+                {produto.isPromotion && produto.originalPrice && (
+                  <span className="text-lg text-gray-500 line-through">
+                    {produto.originalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                {produto.stock} unidades disponíveis
               </p>
             </div>
             
-            {/* Seletor de quantidade */}
-            <div className="flex items-center mb-8">
-              <label className="mr-4 text-gray-700">Quantidade:</label>
-              <div className="flex items-center border border-gray-300 rounded-md">
-                <button 
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">Descrição</h2>
+              <p className="text-gray-600">{produto.description}</p>
+            </div>
+            
+            {/* Controles de quantidade e botão de adicionar ao carrinho */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <button
                   onClick={decrementarQuantidade}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100"
+                  className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100"
                   disabled={quantidade <= 1}
                 >
                   -
                 </button>
-                <span className="px-4 py-2 text-gray-800 border-x border-gray-300">{quantidade}</span>
-                <button 
+                <span className="text-lg font-medium">{quantidade}</span>
+                <button
                   onClick={incrementarQuantidade}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100"
-                  disabled={produto.stock ? quantidade >= produto.stock : false}
+                  className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100"
+                  disabled={quantidade >= produto.stock}
                 >
                   +
                 </button>
               </div>
+              
+              <button
+                onClick={handleAdicionarAoCarrinho}
+                className={`w-full py-3 px-6 rounded-lg font-medium transition-colors duration-200 ${
+                  adicionadoAoCarrinho
+                    ? 'bg-green-600 text-white'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+                disabled={adicionadoAoCarrinho}
+              >
+                {adicionadoAoCarrinho ? 'Adicionado ao carrinho!' : 'Adicionar ao carrinho'}
+              </button>
             </div>
-            
-            {/* Botão de adicionar ao carrinho */}
-            <button 
-              onClick={handleAdicionarAoCarrinho}
-              className={`w-full py-3 px-6 rounded-md font-medium transition-all ${
-                adicionadoAoCarrinho 
-                  ? 'bg-green-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-            >
-              {adicionadoAoCarrinho ? 'Adicionado ao carrinho! ✓' : 'Adicionar ao carrinho'}
-            </button>
           </div>
         </div>
       </div>

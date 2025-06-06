@@ -40,7 +40,7 @@ export default function AdminTicketPage() {
   const { data: ticket, isLoading: isLoadingTicket } = useQuery<Ticket>({
     queryKey: ['ticket', ticketId],
     queryFn: async () => {
-      const response = await fetch(`http://localhost:5000/api/tickets/${ticketId}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tickets/${ticketId}`);
       if (!response.ok) throw new Error('Erro ao carregar ticket');
       return response.json();
     },
@@ -50,7 +50,7 @@ export default function AdminTicketPage() {
   const { data: users } = useQuery<User[]>({
     queryKey: ['users'],
     queryFn: async () => {
-      const response = await fetch('http://localhost:5000/api/users');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`);
       if (!response.ok) throw new Error('Erro ao carregar usuários');
       return response.json();
     },
@@ -60,7 +60,7 @@ export default function AdminTicketPage() {
   // Mutation para atualizar prioridade
   const updateStatusticket = useMutation({
     mutationFn: async ({ priority, status }: { priority?: TicketPriority, status?: TicketStatus }) => {
-      const response = await fetch(`http://localhost:5000/api/tickets/${ticketId}/update-status`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tickets/${ticketId}/update-status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ priority, status }),
@@ -80,7 +80,7 @@ export default function AdminTicketPage() {
   // Mutation para enviar mensagem
   const sendMessageMutation = useMutation({
     mutationFn: async (message: string) => {
-      const response = await fetch(`http://localhost:5000/api/tickets/${ticketId}/messages`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tickets/${ticketId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: message, user_id: session?.user.id }),

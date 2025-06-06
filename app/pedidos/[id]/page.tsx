@@ -13,7 +13,7 @@ const PedidoDetalhesPage = () => {
   const { data: pedido, isLoading } = useQuery<Pedido>({
     queryKey: ['pedido', id],
     queryFn: async () => {
-      const response = await fetch(`http://localhost:5000/api/orders/${id}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${id}`);
       if (!response.ok) throw new Error('Erro ao carregar pedido');
       return response.json();
     },

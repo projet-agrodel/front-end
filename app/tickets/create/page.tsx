@@ -48,7 +48,7 @@ export default function NewTicketPage() {
 
   const createTicketMutation = useMutation({
     mutationFn: async (data: TicketFormValues) => {
-      const response = await fetch('http://localhost:5000/api/tickets', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tickets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: session?.user.id, ...data }),

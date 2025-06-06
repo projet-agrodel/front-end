@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { signIn } from 'next-auth/react';
 import ForgotPasswordPopup from '../_components/ForgotPasswordPopup';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Schema de validação com Zod
 const loginSchema = z.object({

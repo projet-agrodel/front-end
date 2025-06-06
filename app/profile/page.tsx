@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Cartao as ApiCartao, ApiComentario } from '@/services/interfaces/interfaces';
+import { User, Cartao as ApiCartao } from '@/services/interfaces/interfaces';
 import { Tab, Card as LocalCard, Comment as LocalComment } from '../_components/profile/types';
 import { ProfileHeader } from '../_components/profile/ProfileHeader';
 import { TabNavigation } from '../_components/profile/TabNavigation';
@@ -12,7 +12,7 @@ import { ChangePasswordTab } from '../_components/profile/tabs/ChangePasswordTab
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const fetchUserData = async (token: string | null | undefined): Promise<User | null> => {
   if (!token) {
@@ -45,24 +45,6 @@ const fetchUserData = async (token: string | null | undefined): Promise<User | n
   }
 };
 
-const fetchUserComments = async (token: string, userId: number): Promise<ApiComentario[] | null> => {
-  console.log(`fetchUserComments: Buscando comentários para userId: ${userId} (MOCK).`);
-  // TODO: Implementar chamada real à API. Ex: /api/comments/user/${userId}
-  // Mock data com a estrutura de ApiComentario:
-  try {
-    // Simulando uma chamada de API que pode falhar ou retornar vazio
-    // if (Math.random() > 0.8) return null; // Simula falha
-    // if (Math.random() > 0.6) return []; // Simula ausência de comentários
-    return [
-      { id: 1, user_id: userId, product_id: 101, comment: 'Ótimo produto mockado!', rating: 5, created_at: '2023-01-15T10:30:00Z', updated_at: '2023-01-15T10:30:00Z' },
-      { id: 2, user_id: userId, product_id: 102, comment: 'Gostei bastante, mockado.', rating: 4, created_at: '2023-01-20T12:00:00Z', updated_at: '2023-01-20T12:00:00Z' },
-      { id: 3, user_id: userId, product_id: 103, comment: 'Poderia ser melhor (mock).', created_at: '2023-02-10T15:00:00Z', updated_at: '2023-02-10T15:00:00Z' }, // Sem rating
-    ];
-  } catch (error) {
-    console.error("fetchUserComments MOCK: Erro simulado", error);
-    return null;
-  }
-};
 
 interface ProfileViewModel extends User {
   avatar?: string;
@@ -76,15 +58,7 @@ const mapApiCartaoToLocalCard = (apiCartao: ApiCartao): LocalCard => {
   };
 };
 
-const mapApiComentarioToLocalComment = (apiComentario: ApiComentario): LocalComment => {
-  return {
-    id: apiComentario.id,
-    text: apiComentario.comment,
-    productName: apiComentario.produto?.name || `Produto ID: ${apiComentario.product_id}`, // Tenta usar o nome do produto se disponível
-    rating: apiComentario.rating === undefined || apiComentario.rating === null ? 0 : apiComentario.rating, // Garante que rating seja um número, default 0
-    date: new Date(apiComentario.created_at).toLocaleDateString('pt-BR'), // Formata a data
-  };
-};
+
 
 const ProfilePage = () => {
   const { data: session, status } = useSession();
@@ -123,15 +97,6 @@ const ProfilePage = () => {
             } else {
               setProfileCards([]);
             }
-
-            const fetchedComments = await fetchUserComments(accessToken, fetchedCoreUser.id);
-            if (fetchedComments && fetchedComments.length > 0) {
-              const mappedComments = fetchedComments.map(mapApiComentarioToLocalComment);
-              setProfileComments(mappedComments);
-            } else {
-              setProfileComments([]);
-            }
-
           } else {
             setUserData(null);
             setProfileCards([]);
