@@ -20,10 +20,11 @@ async function getAuthHeaders(): Promise<HeadersInit> {
 
 export const getCategories = async (searchTerm: string = ''): Promise<Categoria[]> => {
   const headers = await getAuthHeaders();
-  let url = `${API_URL}/categories`;
-  if (searchTerm) {
-    url += `?&search=${encodeURIComponent(searchTerm)}`;
-  }
+  let url = `${API_URL}/api/categories`;
+ 
+  //if (searchTerm) {
+  //  url += `?&search=${encodeURIComponent(searchTerm)}`;
+  //}
   
   const response = await fetch(url, { headers });
 
@@ -39,7 +40,7 @@ export const getCategories = async (searchTerm: string = ''): Promise<Categoria[
 
 export const createCategory = async (categoryData: { name: string; description?: string }): Promise<{ message: string, category: Categoria }> => {
   const headers = await getAuthHeaders();
-  const response = await fetch(`${API_URL}/categories`, {
+  const response = await fetch(`${API_URL}/api/categories`, {
     method: 'POST',
     headers,
     body: JSON.stringify(categoryData),
@@ -56,7 +57,7 @@ export const createCategory = async (categoryData: { name: string; description?:
 
 export const updateCategory = async (categoryId: string, categoryData: { name?: string; description?: string }): Promise<{ message: string, category: Categoria }> => {
   const headers = await getAuthHeaders();
-  const response = await fetch(`${API_URL}/categories/${categoryId}`, {
+  const response = await fetch(`${API_URL}/api/categories/${categoryId}`, {
     method: 'PUT',
     headers,
     body: JSON.stringify(categoryData),
@@ -73,7 +74,7 @@ export const updateCategory = async (categoryId: string, categoryData: { name?: 
 
 export const deleteCategory = async (categoryId: string): Promise<{ message: string }> => {
   const headers = await getAuthHeaders();
-  const response = await fetch(`${API_URL}/categories/${categoryId}`, {
+  const response = await fetch(`${API_URL}/api/categories/${categoryId}`, {
     method: 'DELETE',
     headers,
   });

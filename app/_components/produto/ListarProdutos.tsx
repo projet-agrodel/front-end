@@ -11,9 +11,10 @@ import CardProduto from './CardProduto';
 import BuscarProdutos from './BuscarProdutos';
 import FiltroPanel from './FiltroPanel';
 import { Produto, Categoria } from '@/services/interfaces/interfaces';
+import { getCategories } from '@/services/categoryService';
 
 // Definir a URL da API
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Schema de validação para os filtros
 const filterSchema = z.object({
@@ -93,18 +94,11 @@ const fetchProducts = async (filters: FilterFormData): Promise<Produto[]> => {
   const data = await response.json();
   return data.map((p: Produto) => ({
     ...p,
-    img: p.img || '/img/produtos/placeholder.png'
+    img: p.imageUrl || '/img/produtos/placeholder.png'
   }));
 };
 
-// Função para buscar categorias
-const fetchCategories = async (): Promise<Categoria[]> => {
-  const response = await fetch(`${API_URL}/api/categories`);
-  if (!response.ok) {
-    throw new Error('Erro ao buscar categorias');
-  }
-  return response.json();
-};
+
 
 const ListarProdutos = () => {
   const router = useRouter();
@@ -130,7 +124,7 @@ const ListarProdutos = () => {
 
   // Observar mudanças nos filtros
   const filters = watch();
-  const prevFiltersRef = useRef<FilterFormData>(); // Ref para guardar filtros anteriores
+  const prevFiltersRef = useRef<FilterFormData>({} as FilterFormData); // Ref para guardar filtros anteriores
 
   // React Query para buscar dados
   const { data: produtos, isLoading: isLoadingProdutos, error: produtosError } = useQuery<Produto[], Error>({
@@ -141,7 +135,10 @@ const ListarProdutos = () => {
 
   const { data: categorias, isLoading: isLoadingCategorias } = useQuery<Categoria[], Error>({
     queryKey: ['categorias'],
-    queryFn: fetchCategories
+    queryFn: async () => {
+       const data = await getCategories()
+       return data
+    }
   });
 
   // Efeito para atualizar URL quando os filtros do formulário mudam E o botão de busca é clicado
