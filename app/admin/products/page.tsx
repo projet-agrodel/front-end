@@ -8,48 +8,33 @@ import {
     createAdminProduct, 
     updateAdminProduct, 
     deleteAdminProduct,
-    AdminProduct,
     GetAdminProductsParams,
 } from '../../../services/adminProductService';
 import { getAuthTokenForAdmin } from '../../../utils/authAdmin';
-import { getCategories, Category } from '../../../services/categoryService';
+import { getCategories } from '../../../services/categoryService';
 
 // Importar componentes refatorados
 import { ConfirmationModal } from './_components/ConfirmationModal';
-import { ProductForm, DisplayProduct as FormDisplayProduct } from './_components/ProductForm';
+import { ProductForm } from './_components/ProductForm';
+import { Categoria, Produto } from '@/services/interfaces/interfaces';
 
-// Interface DisplayProduct para a tabela e estado da página
-export interface PageDisplayProduct {
-    id: number; 
-    name: string;
-    description: string;
-    price: number;
-    stock: number;
-    imageUrl?: string | null; 
-    status: 'Ativo' | 'Inativo';
-    isPromotion: boolean; 
-    originalPrice?: number | null;
-    category?: { id: number; name: string }; 
-    createdAt?: string | Date; 
-    updatedAt?: string | Date;
-}
 
 interface ApiError {
     message?: string;
 }
 
 export default function AdminProductsPage() {
-    const [products, setProducts] = useState<PageDisplayProduct[]>([]);
-    const [realCategories, setRealCategories] = useState<Category[]>([]);
+    const [products, setProducts] = useState<Produto []>([]);
+    const [realCategories, setRealCategories] = useState<Categoria[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [error, setError] = useState<string | null>(null);
 
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [editingProduct, setEditingProduct] = useState<PageDisplayProduct | null>(null);
+    const [editingProduct, setEditingProduct] = useState<Produto  | null>(null);
 
     const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
-    const [productToDelete, setProductToDelete] = useState<PageDisplayProduct | null>(null);
+    const [productToDelete, setProductToDelete] = useState<Produto  | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     // const { toast } = useToast(); // Para notificações futuras
@@ -62,8 +47,8 @@ export default function AdminProductsPage() {
         }
 
         try {
-            const categoryData = await getCategories(1, 200, '');
-            setRealCategories(categoryData.categories || []);
+            const categoryData = await getCategories();
+            setRealCategories(categoryData || []);
         } catch (catErr) {
             console.error("Erro ao buscar categorias para o formulário:", catErr);
             const apiCatError = catErr as ApiError;
@@ -89,7 +74,7 @@ export default function AdminProductsPage() {
             
             const fetchedProducts = await getAdminProducts(token, params);
             
-            setProducts(fetchedProducts.map((p: AdminProduct): PageDisplayProduct => ({
+            setProducts(fetchedProducts.map((p: Produto): Produto  => ({
                 id: p.id,
                 name: p.name,
                 description: p.description,
@@ -98,10 +83,10 @@ export default function AdminProductsPage() {
                 imageUrl: p.imageUrl,
                 status: p.status,
                 isPromotion: !!p.isPromotion,
-                originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
+                originalPrice: p.originalPrice && Number(p.originalPrice),
                 category: p.category === null ? undefined : p.category,
-                createdAt: p.createdAt,
-                updatedAt: p.updatedAt,
+                created_at: p.created_at,
+                updated_at: p.updated_at,
             })));
         } catch (err: unknown) {
             console.error("Erro ao buscar produtos:", err);
@@ -131,7 +116,7 @@ export default function AdminProductsPage() {
         setIsFormOpen(true);
     };
 
-    const handleEditClick = (product: PageDisplayProduct) => {
+    const handleEditClick = (product: Produto ) => {
         setEditingProduct(product);
         setIsFormOpen(true);
     };
@@ -141,14 +126,14 @@ export default function AdminProductsPage() {
         setEditingProduct(null);
     };
 
-    const handleFormSuccess = (returnedProduct: AdminProduct) => {
+    const handleFormSuccess = (returnedProduct: Produto) => {
         // Idealmente, mostrar um toast de sucesso aqui.
         console.log("Produto salvo com sucesso:", returnedProduct);
         fetchProducts(); // Recarregar a lista de produtos
         handleCloseForm(); // Fechar o formulário
     };
 
-    const handleDeleteClick = (product: PageDisplayProduct) => {
+    const handleDeleteClick = (product: Produto ) => {
         setProductToDelete(product);
         setIsConfirmDeleteOpen(true);
     };
@@ -381,7 +366,7 @@ export default function AdminProductsPage() {
                         isOpen={isFormOpen} 
                         onClose={handleCloseForm} 
                         onSubmitSuccess={handleFormSuccess} 
-                        initialData={editingProduct as FormDisplayProduct | null} // Cast para o tipo esperado pelo formulário
+                        initialData={editingProduct || null} // Cast para o tipo esperado pelo formulário
                         categories={realCategories.map(cat => ({ id: Number(cat.id), name: cat.name }))} // Passar categorias reais
                         createProductFn={createAdminProduct} 
                         updateProductFn={updateAdminProduct} 

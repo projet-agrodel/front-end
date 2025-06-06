@@ -3,7 +3,7 @@ import NextAuth from 'next-auth';
 import { AuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export const authOptions: AuthOptions = {
   providers: [

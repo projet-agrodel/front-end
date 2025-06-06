@@ -347,15 +347,6 @@ export default function AdminOrdersPage() {
                                                 >
                                                     <Eye size={18} />
                                                 </motion.button>
-                                                <motion.button 
-                                                    onClick={() => triggerEditStatus(order)} 
-                                                    className="p-1.5 text-orange-500 hover:text-orange-700 hover:bg-orange-100 rounded-full transition-all duration-150 disabled:opacity-50"
-                                                    title="Atualizar Status"
-                                                    whileHover={{scale: 1.1}} whileTap={{scale: 0.9}}
-                                                    disabled={isLoading || order.status === 'Concluido' || updateStatusMutation.isPending}
-                                                >
-                                                    <Edit size={18} />
-                                                </motion.button>
                                             </td>
                                         </motion.tr>
                                     ))}

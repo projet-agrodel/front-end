@@ -1,39 +1,38 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-    AdminProduct,
-    CreateAdminProductPayload,
-    UpdateAdminProductPayload,
-} from '../../../../services/adminProductService'; // Ajuste o caminho se necessário
-import { getAuthTokenForAdmin } from '../../../../utils/authAdmin'; // Ajuste o caminho se necessário
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useMutation } from '@tanstack/react-query';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
-
-// Interface DisplayProduct (necessária para initialData)
-export interface DisplayProduct {
-    id: number; 
-    name: string;
-    description: string;
-    price: number;
-    stock: number;
-    imageUrl?: string | null; 
-    status: 'Ativo' | 'Inativo';
-    isPromotion: boolean; 
-    originalPrice?: number | null;
-    category?: { id: number; name: string }; 
-}
+import { Produto } from '@/services/interfaces/interfaces';
+import { getAuthTokenForAdmin } from '../../../../utils/authAdmin';
 
 export interface ProductFormProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmitSuccess: (data: AdminProduct) => void; 
-    initialData?: DisplayProduct | null;
+    onSubmitSuccess: (data: Produto) => void;
+    initialData?: Produto | null;
     categories: { id: number; name: string }[];
-    // Funções de serviço de page.tsx
-    createProductFn: (payload: CreateAdminProductPayload, token: string) => Promise<AdminProduct>;
-    updateProductFn: (id: string, payload: UpdateAdminProductPayload, token: string) => Promise<AdminProduct>;
+    createProductFn: (payload: any, token: string) => Promise<Produto>;
+    updateProductFn: (id: string, payload: any, token: string) => Promise<Produto>;
 }
+
+const productFormSchema = z.object({
+    name: z.string().min(1, 'Nome é obrigatório'),
+    description: z.string().min(1, 'Descrição é obrigatória'),
+    price: z.number().min(0.01, 'Preço deve ser maior que zero'),
+    originalPrice: z.number().nullable(),
+    stock: z.number().min(0, 'Estoque não pode ser negativo'),
+    imageUrl: z.string().optional(),
+    status: z.enum(['Ativo', 'Inativo']),
+    isPromotion: z.boolean(),
+    category_id: z.number().nullable(),
+});
+
+type ProductFormValues = z.infer<typeof productFormSchema>;
 
 const inputBaseClass = "block w-full px-4 py-3 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg shadow-sm transition-all duration-150 ease-in-out focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none";
 const labelBaseClass = "block text-sm font-medium text-gray-700 mb-1.5";
@@ -47,150 +46,84 @@ export function ProductForm({
     createProductFn,
     updateProductFn
 }: ProductFormProps) {
-    const [formData, setFormData] = useState<Partial<CreateAdminProductPayload>>({});
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const form = useForm<ProductFormValues>({
+        resolver: zodResolver(productFormSchema),
+        defaultValues: {
+            name: '',
+            description: '',
+            price: 0,
+            originalPrice: null,
+            stock: 0,
+            imageUrl: '',
+            status: 'Ativo',
+            isPromotion: false,
+            category_id: null,
+        },
+    });
 
-    useEffect(() => {
+    // Reset form quando o modal é aberto/fechado ou quando initialData muda
+    React.useEffect(() => {
         if (isOpen) {
-            // Reset states ao abrir
-            setError(null);
-            setSuccessMessage(null);
-            setIsSubmitting(false);
-
             if (initialData) {
-                setFormData({
-                    name: initialData.name || '',
-                    description: initialData.description || '',
-                    price: initialData.price ?? 0,
-                    stock: initialData.stock ?? 0,
-                    category_id: initialData.category?.id,
+                form.reset({
+                    name: initialData.name,
+                    description: initialData.description,
+                    price: initialData.price,
+                    originalPrice: initialData.originalPrice,
+                    stock: initialData.stock,
                     imageUrl: initialData.imageUrl || '',
-                    status: initialData.status || 'Ativo',
-                    isPromotion: !!initialData.isPromotion,
-                    originalPrice: initialData.isPromotion ? (initialData.originalPrice ?? null) : null,
+                    status: initialData.status as 'Ativo' | 'Inativo',
+                    isPromotion: initialData.isPromotion,
+                    category_id: initialData.category?.id || null,
                 });
             } else {
-                setFormData({
+                form.reset({
                     name: '',
                     description: '',
-                    price: 0, 
-                    stock: 0, 
-                    category_id: undefined,
+                    price: 0,
+                    originalPrice: null,
+                    stock: 0,
                     imageUrl: '',
                     status: 'Ativo',
                     isPromotion: false,
-                    originalPrice: null, 
+                    category_id: null,
                 });
             }
-        } else {
-            // Limpar dados quando o modal é fechado (para não mostrar dados antigos rapidamente na reabertura)
-             setFormData({}); 
         }
-    }, [initialData, isOpen]);
+    }, [isOpen, initialData, form]);
+
+    const createMutation = useMutation({
+        mutationFn: async (values: ProductFormValues) => {
+            const token = await getAuthTokenForAdmin();
+            if (!token) throw new Error('Autenticação necessária');
+            return createProductFn(values, token);
+        },
+        onSuccess: (data) => {
+            onSubmitSuccess(data);
+        },
+    });
+
+    const updateMutation = useMutation({
+        mutationFn: async (values: ProductFormValues) => {
+            const token = await getAuthTokenForAdmin();
+            if (!token) throw new Error('Autenticação necessária');
+            if (!initialData?.id) throw new Error('ID do produto não encontrado');
+            return updateProductFn(initialData.id.toString(), values, token);
+        },
+        onSuccess: (data) => {
+            onSubmitSuccess(data);
+        },
+    });
+
+    const onSubmit = async (values: ProductFormValues) => {
+        if (initialData?.id) {
+            updateMutation.mutate(values);
+        } else {
+            createMutation.mutate(values);
+        }
+    };
 
     if (!isOpen) return null;
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value, type } = e.target;
-        let processedValue: string | number | boolean | null | undefined = value;
-
-        if (type === 'checkbox' && name === 'isPromotion') {
-            const { checked } = e.target as HTMLInputElement;
-            processedValue = checked;
-            if (!checked) {
-                setFormData(prev => ({ ...prev, originalPrice: null, [name]: checked }));
-                return;
-            }
-        } else if (name === 'price' || name === 'stock' || name === 'originalPrice') {
-            if (value === '') {
-                processedValue = (name === 'originalPrice') ? null : 0; 
-            } else {
-                const num = parseFloat(value);
-                processedValue = isNaN(num) ? ( (name === 'originalPrice') ? null : 0) : num;
-            }
-        } else if (name === 'category_id') {
-            const categoryStringValue = value; 
-            if (categoryStringValue === '' || categoryStringValue === '0') { 
-                processedValue = undefined;
-            } else {
-                const numCatId = parseInt(categoryStringValue, 10);
-                processedValue = isNaN(numCatId) ? undefined : numCatId;
-            }
-        }
-        setFormData((prev) => ({ ...prev, [name]: processedValue }));
-    };
-
-    const validateFormData = (data: CreateAdminProductPayload): string | null => {
-        if (!data.name || data.price <= 0) {
-            return "Nome do produto e preço (maior que zero) são obrigatórios.";
-        }
-        if (data.isPromotion && (!data.originalPrice || data.originalPrice <= data.price)) {
-            return "Em promoção, o preço original deve ser informado e ser maior que o preço promocional.";
-        }
-        if (data.stock < 0) {
-             return "Estoque não pode ser negativo.";
-        }
-        return null; 
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        setError(null);
-        setSuccessMessage(null);
-        const token = await getAuthTokenForAdmin(); 
-        if (!token) {
-            setError("Autenticação necessária.");
-            setIsSubmitting(false);
-            return;
-        }
-
-        const basePayload: CreateAdminProductPayload = {
-            name: formData.name || '',
-            description: formData.description || '',
-            price: Number(formData.price) || 0,
-            stock: Number(formData.stock) || 0,
-            category_id: formData.category_id ? Number(formData.category_id) : null,
-            imageUrl: formData.imageUrl || undefined,
-            status: formData.status || 'Ativo', 
-            isPromotion: formData.isPromotion || false,
-            originalPrice: formData.isPromotion ? (Number(formData.originalPrice) || null) : null, 
-        };
-
-        const validationError = validateFormData(basePayload);
-        if (validationError) {
-            setError(validationError);
-            setIsSubmitting(false);
-            return;
-        }
-
-        try {
-            let result: AdminProduct;
-            if (initialData?.id) { 
-                const updatePayload: UpdateAdminProductPayload = { ...basePayload };
-                result = await updateProductFn(String(initialData.id), updatePayload, token);
-                setSuccessMessage("Produto atualizado com sucesso!");
-            } else { 
-                result = await createProductFn(basePayload, token);
-                setSuccessMessage("Produto criado com sucesso!");
-            }
-            
-            // Aguardar um pouco para exibir a mensagem de sucesso antes de fechar e recarregar
-            setTimeout(() => {
-                onSubmitSuccess(result);
-                 // onClose(); // Fechar o modal é responsabilidade de page.tsx via onSubmitSuccess
-            }, 1500); 
-
-        } catch (err: unknown) {
-            console.error("Erro ao salvar produto:", err);
-            const apiError = err as { message?: string }; 
-            setError(apiError.message || "Ocorreu um erro desconhecido ao salvar o produto.");
-            setIsSubmitting(false); // Permitir nova tentativa
-        }
-        // Não setar setIsSubmitting(false) aqui se sucesso, pois o timeout vai fechar.
-    };
 
     const overlayVariants = { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } };
     const modalVariants = { 
@@ -199,10 +132,16 @@ export function ProductForm({
         exit: { opacity: 0, y: 30, scale: 0.98, transition: { duration: 0.2, ease: "circIn"} } 
     };
 
+    const isSubmitting = createMutation.isPending || updateMutation.isPending;
+    const error = createMutation.error || updateMutation.error;
+
     return (
         <motion.div 
             className="fixed inset-0 z-50 flex justify-center items-center p-4 backdrop-blur-md bg-transparent bg-opacity-60"
-            variants={overlayVariants} initial="hidden" animate="visible" exit="exit"
+            variants={overlayVariants} 
+            initial="hidden" 
+            animate="visible" 
+            exit="exit"
             onClick={onClose} 
         >
             <motion.div
@@ -223,132 +162,172 @@ export function ProductForm({
                                 exit={{ opacity: 0, y: -5, scale: 0.98, transition: { duration: 0.2 } }}
                                 className="my-4 p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-start shadow-sm text-sm">
                                 <AlertCircle className="h-5 w-5 mr-2.5 flex-shrink-0" />
-                                <span className="flex-grow leading-snug">{error}</span>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                    <AnimatePresence>
-                        {successMessage && (
-                            <motion.div 
-                                initial={{ opacity: 0, y: -10, scale: 0.98 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: -5, scale: 0.98, transition: { duration: 0.2 } }}
-                                className="my-4 p-3.5 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-start shadow-sm text-sm">
-                                <CheckCircle2 className="h-5 w-5 mr-2.5 flex-shrink-0" />
-                                <span className="flex-grow leading-snug">{successMessage}</span>
+                                <span className="flex-grow leading-snug">{error instanceof Error ? error.message : 'Erro ao salvar produto'}</span>
                             </motion.div>
                         )}
                     </AnimatePresence>
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                             <div>
                                 <label htmlFor="name" className={labelBaseClass}>Nome <span className="text-red-500">*</span></label>
-                                <input type="text" name="name" id="name" value={formData.name || ''} onChange={handleChange} required className={inputBaseClass} disabled={isSubmitting} />
+                                <input 
+                                    {...form.register('name')}
+                                    type="text" 
+                                    id="name" 
+                                    className={inputBaseClass} 
+                                    disabled={isSubmitting} 
+                                />
+                                {form.formState.errors.name && (
+                                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.name.message}</p>
+                                )}
                             </div>
                             <div>
                                 <label htmlFor="price" className={labelBaseClass}>Preço (R$) <span className="text-red-500">*</span></label>
-                                <input type="number" name="price" id="price" value={formData.price ?? ''} onChange={handleChange} required min="0.01" step="0.01" className={inputBaseClass} disabled={isSubmitting} />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label htmlFor="description" className={labelBaseClass}>Descrição</label>
-                            <textarea name="description" id="description" value={formData.description || ''} onChange={handleChange} rows={3} className={`${inputBaseClass} min-h-[80px]`} disabled={isSubmitting}></textarea>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                            <div>
-                                <label htmlFor="stock" className={labelBaseClass}>Estoque <span className="text-red-500">*</span></label>
-                                <input type="number" name="stock" id="stock" value={formData.stock ?? ''} onChange={handleChange} required min="0" step="1" className={inputBaseClass} disabled={isSubmitting} />
-                            </div>
-                            <div>
-                                <label htmlFor="category_id" className={labelBaseClass}>Categoria</label>
-                                <select 
-                                    name="category_id" 
-                                    id="category_id" 
-                                    value={formData.category_id || ''}
-                                    onChange={handleChange} 
-                                    className={`${inputBaseClass} appearance-none`}
-                                    disabled={isSubmitting || categories.length === 0}
-                                >
-                                    <option value="">{categories.length === 0 ? (isSubmitting ? "Carregando..." : "Nenhuma categoria disponível") : "Selecione uma categoria"}</option>
-                                    {categories.map(category => (
-                                        <option key={category.id} value={category.id}>
-                                            {category.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                {categories.length === 0 && !isSubmitting && (
-                                    <p className="mt-1 text-xs text-gray-500">Não há categorias cadastradas. Adicione categorias primeiro.</p>
+                                <input 
+                                    {...form.register('price', { valueAsNumber: true })}
+                                    type="number" 
+                                    id="price" 
+                                    min="0.01" 
+                                    step="0.01" 
+                                    className={inputBaseClass} 
+                                    disabled={isSubmitting} 
+                                />
+                                {form.formState.errors.price && (
+                                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.price.message}</p>
                                 )}
                             </div>
                         </div>
 
                         <div>
-                            <label htmlFor="imageUrl" className={labelBaseClass}>URL da Imagem</label>
-                            <input type="url" name="imageUrl" id="imageUrl" value={formData.imageUrl || ''} onChange={handleChange} placeholder="https://exemplo.com/imagem.jpg" className={inputBaseClass} disabled={isSubmitting} />
+                            <label htmlFor="description" className={labelBaseClass}>Descrição</label>
+                            <textarea 
+                                {...form.register('description')}
+                                id="description" 
+                                rows={3} 
+                                className={`${inputBaseClass} min-h-[80px]`} 
+                                disabled={isSubmitting}
+                            />
+                            {form.formState.errors.description && (
+                                <p className="mt-1 text-sm text-red-600">{form.formState.errors.description.message}</p>
+                            )}
                         </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 items-center pt-2">
-                             <div>
-                                <label htmlFor="status" className={labelBaseClass}>Status</label>
-                                <select name="status" id="status" value={formData.status || 'Ativo'} onChange={handleChange} className={`${inputBaseClass} appearance-none`} disabled={isSubmitting}>
-                                    <option value="Ativo">Ativo</option>
-                                    <option value="Inativo">Inativo</option>
-                                </select>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                            <div>
+                                <label htmlFor="stock" className={labelBaseClass}>Estoque <span className="text-red-500">*</span></label>
+                                <input 
+                                    {...form.register('stock', { valueAsNumber: true })}
+                                    type="number" 
+                                    id="stock" 
+                                    min="0" 
+                                    step="1" 
+                                    className={inputBaseClass} 
+                                    disabled={isSubmitting} 
+                                />
+                                {form.formState.errors.stock && (
+                                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.stock.message}</p>
+                                )}
                             </div>
-                            <div className="flex items-center self-end pb-1 md:mt-0 mt-2">
-                                <input type="checkbox" name="isPromotion" id="isPromotion" checked={!!formData.isPromotion} onChange={handleChange} className="h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer shadow-sm" disabled={isSubmitting} />
-                                <label htmlFor="isPromotion" className="ml-2.5 block text-sm font-medium text-gray-700 cursor-pointer">Em Promoção?</label>
+                            <div>
+                                <label htmlFor="originalPrice" className={labelBaseClass}>Preço Original (opcional)</label>
+                                <input 
+                                    {...form.register('originalPrice', { valueAsNumber: true })}
+                                    type="number" 
+                                    id="originalPrice" 
+                                    min="0.01" 
+                                    step="0.01" 
+                                    className={inputBaseClass} 
+                                    disabled={isSubmitting} 
+                                />
+                                {form.formState.errors.originalPrice && (
+                                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.originalPrice.message}</p>
+                                )}
                             </div>
                         </div>
 
-                        <AnimatePresence>
-                            {formData.isPromotion && (
-                                <motion.div 
-                                    initial={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
-                                    animate={{ opacity: 1, height: 'auto', marginTop: '1.25rem', marginBottom: '1.25rem' }}
-                                    exit={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
-                                    transition={{duration: 0.3, ease: "easeInOut"}}
-                                    className="overflow-hidden p-1"
-                                >
-                                    <label htmlFor="originalPrice" className={labelBaseClass}>Preço Original (R$) <span className="text-red-500">*</span></label>
-                                    <input type="number" name="originalPrice" id="originalPrice" value={formData.originalPrice ?? ''} onChange={handleChange} required={formData.isPromotion} min="0.01" step="0.01" className={inputBaseClass} disabled={isSubmitting} />
-                                </motion.div>
+                        <div>
+                            <label htmlFor="imageUrl" className={labelBaseClass}>URL da Imagem (opcional)</label>
+                            <input 
+                                {...form.register('imageUrl')}
+                                type="text" 
+                                id="imageUrl" 
+                                className={inputBaseClass} 
+                                disabled={isSubmitting} 
+                            />
+                            {form.formState.errors.imageUrl && (
+                                <p className="mt-1 text-sm text-red-600">{form.formState.errors.imageUrl.message}</p>
                             )}
-                        </AnimatePresence>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                            <div>
+                                <label htmlFor="status" className={labelBaseClass}>Status</label>
+                                <select 
+                                    {...form.register('status')}
+                                    id="status" 
+                                    className={inputBaseClass} 
+                                    disabled={isSubmitting}
+                                >
+                                    <option value="Ativo">Ativo</option>
+                                    <option value="Inativo">Inativo</option>
+                                </select>
+                                {form.formState.errors.status && (
+                                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.status.message}</p>
+                                )}
+                            </div>
+                            <div>
+                                <label htmlFor="category_id" className={labelBaseClass}>Categoria</label>
+                                <select 
+                                    {...form.register('category_id', { valueAsNumber: true })}
+                                    id="category_id" 
+                                    className={inputBaseClass} 
+                                    disabled={isSubmitting}
+                                >
+                                    <option value="">Selecione uma categoria</option>
+                                    {categories.map((category) => (
+                                        <option key={category.id} value={category.id}>
+                                            {category.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {form.formState.errors.category_id && (
+                                    <p className="mt-1 text-sm text-red-600">{form.formState.errors.category_id.message}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                            <input 
+                                {...form.register('isPromotion')}
+                                type="checkbox" 
+                                id="isPromotion" 
+                                className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" 
+                                disabled={isSubmitting}
+                            />
+                            <label htmlFor="isPromotion" className="text-sm font-medium text-gray-700">
+                                Em Promoção
+                            </label>
+                        </div>
+
+                        <div className="flex justify-end space-x-3 pt-4">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                disabled={isSubmitting}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? 'Salvando...' : initialData ? 'Atualizar' : 'Criar'}
+                            </button>
+                        </div>
                     </form>
-                </div>
-                
-                <div className="flex justify-end gap-4 pt-6 mt-3 flex-shrink-0 border-t border-gray-200/80">
-                    <motion.button 
-                        type="button" 
-                        onClick={onClose} 
-                        className="px-7 py-3 bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-all duration-150 ease-in-out shadow-sm disabled:opacity-60"
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.98 }}
-                        disabled={isSubmitting}
-                    >
-                        Cancelar
-                    </motion.button>
-                    <motion.button 
-                        type="submit" 
-                        className="px-7 py-3 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-lg text-sm font-semibold hover:from-green-600 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-150 ease-in-out shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-wait"
-                        whileHover={{ scale: 1.03, y: -1 }}
-                        whileTap={{ scale: 0.98, y: 0 }}
-                        disabled={isSubmitting || !!successMessage}
-                    >
-                        {isSubmitting ? (
-                            <span className="flex items-center justify-center">
-                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Salvando...
-                            </span>
-                        ) : successMessage ? 'Salvo!' : (initialData ? 'Salvar Alterações' : 'Adicionar Produto')}
-                    </motion.button>
                 </div>
             </motion.div>
         </motion.div>

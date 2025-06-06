@@ -1,20 +1,8 @@
+import { Produto } from "./interfaces/interfaces";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 // Interface alinhada com o backend
-export interface AdminProduct {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  stock: number;
-  category: { id: number; name: string } | null;
-  imageUrl?: string; 
-  status: 'Ativo' | 'Inativo'; 
-  isPromotion: boolean; 
-  originalPrice?: number | null;
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 const getHeaders = (token: string) => {
   if (!token) {
@@ -36,7 +24,7 @@ export interface GetAdminProductsParams {
   // limit?: number;
 }
 
-export async function getAdminProducts(token: string, params: GetAdminProductsParams = {}): Promise<AdminProduct[]> {
+export async function getAdminProducts(token: string, params: GetAdminProductsParams = {}): Promise<Produto[]> {
   try {
     // Construir a URL com os parâmetros
     const url = new URL(`${API_URL}/admin/products`);
@@ -64,7 +52,7 @@ export async function getAdminProducts(token: string, params: GetAdminProductsPa
   }
 }
 
-export const getAdminProductById = async (id: string, token: string): Promise<AdminProduct> => {
+export const getAdminProductById = async (id: string, token: string): Promise<Produto> => {
 
   const response = await fetch(`${API_URL}/products/${id}`, {
     method: 'GET',
@@ -82,19 +70,19 @@ export const getAdminProductById = async (id: string, token: string): Promise<Ad
   return product;
 };
 
-export type CreateAdminProductPayload = Omit<AdminProduct, 'id' | 'category' | 'createdAt' | 'updatedAt'> & { 
+export type CreateAdminProductPayload = Omit<Produto, 'id' | 'category' | 'created_at' | 'updated_at'> & { 
     category_id?: number | null;
     name: string;
     description: string;
     price: number;
     stock: number;
     imageUrl?: string;
-    status: 'Ativo' | 'Inativo'; 
+    status: string; 
     isPromotion: boolean;     
-    originalPrice?: number | null;
+    originalPrice: number;
 };
 
-export const createAdminProduct = async (productData: CreateAdminProductPayload, token: string): Promise<AdminProduct> => {
+export const createAdminProduct = async (productData: CreateAdminProductPayload, token: string): Promise<Produto> => {
   const response = await fetch(`${API_URL}/admin/products`, { 
     method: 'POST',
     headers: getHeaders(token),
@@ -109,7 +97,7 @@ export const createAdminProduct = async (productData: CreateAdminProductPayload,
 
 export type UpdateAdminProductPayload = Partial<CreateAdminProductPayload>;
 
-export const updateAdminProduct = async (id: string, productData: UpdateAdminProductPayload, token: string): Promise<AdminProduct> => {
+export const updateAdminProduct = async (id: string, productData: UpdateAdminProductPayload, token: string): Promise<Produto> => {
   const response = await fetch(`${API_URL}/admin/products/${id}`, { 
     method: 'PUT',
     headers: getHeaders(token),
@@ -133,7 +121,7 @@ export const deleteAdminProduct = async (id: string, token: string): Promise<voi
   }
 };
 
-export const updateAdminProductStock = async (id: string, quantity: number, token: string): Promise<AdminProduct> => {
+export const updateAdminProductStock = async (id: string, quantity: number, token: string): Promise<Produto> => {
   const response = await fetch(`${API_URL}/admin/products/${id}/stock`, { 
     method: 'PATCH',
     headers: getHeaders(token),
@@ -145,14 +133,3 @@ export const updateAdminProductStock = async (id: string, quantity: number, toke
   }
   return response.json();
 };
-
-// Nota: A função getAuthToken() é uma suposição.
-// Você precisará implementar ou ajustar a forma como o token JWT é obtido e gerenciado no seu app.
-// Exemplo: pode vir de um AuthContext, localStorage, ou cookies.
-//
-// function getAuthToken(): string | null {
-//   if (typeof window !== "undefined") {
-//     return localStorage.getItem('jwtToken');
-//   }
-//   return null;
-// } 

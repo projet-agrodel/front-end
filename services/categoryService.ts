@@ -1,23 +1,8 @@
 import { getSession } from 'next-auth/react'; // Para pegar o token se necessário
+import { Categoria } from './interfaces/interfaces';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export interface Category {
-  id: string; // No frontend, pode ser string ou number dependendo da API
-  name: string;
-  description: string;
-  productCount?: number; // productCount será tratado pelo backend
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface PaginatedCategoriesResponse {
-  categories: Category[];
-  total: number;
-  pages: number;
-  current_page: number;
-  per_page: number;
-}
 
 // Helper para obter o token de autenticação
 async function getAuthHeaders(): Promise<HeadersInit> {
@@ -33,11 +18,11 @@ async function getAuthHeaders(): Promise<HeadersInit> {
   return headers;
 }
 
-export const getCategories = async (page: number = 1, perPage: number = 10, searchTerm: string = ''): Promise<PaginatedCategoriesResponse> => {
+export const getCategories = async (searchTerm: string = ''): Promise<Categoria[]> => {
   const headers = await getAuthHeaders();
-  let url = `${API_URL}/categories?page=${page}&per_page=${perPage}`;
+  let url = `${API_URL}/categories`;
   if (searchTerm) {
-    url += `&search=${encodeURIComponent(searchTerm)}`;
+    url += `?&search=${encodeURIComponent(searchTerm)}`;
   }
   
   const response = await fetch(url, { headers });
@@ -46,10 +31,13 @@ export const getCategories = async (page: number = 1, perPage: number = 10, sear
     const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido ao buscar categorias.' }));
     throw new Error(errorData.message || `Erro ${response.status} ao buscar categorias.`);
   }
-  return response.json();
+  
+  const data = await response.json();
+
+  return data.categories
 };
 
-export const createCategory = async (categoryData: { name: string; description?: string }): Promise<{ message: string, category: Category }> => {
+export const createCategory = async (categoryData: { name: string; description?: string }): Promise<{ message: string, category: Categoria }> => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/categories`, {
     method: 'POST',
@@ -60,10 +48,13 @@ export const createCategory = async (categoryData: { name: string; description?:
     const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido ao criar categoria.' }));
     throw new Error(errorData.message || `Erro ${response.status} ao criar categoria.`);
   }
-  return response.json();
+  
+  const data = await response.json();
+
+  return data.category
 };
 
-export const updateCategory = async (categoryId: string, categoryData: { name?: string; description?: string }): Promise<{ message: string, category: Category }> => {
+export const updateCategory = async (categoryId: string, categoryData: { name?: string; description?: string }): Promise<{ message: string, category: Categoria }> => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/categories/${categoryId}`, {
     method: 'PUT',
@@ -74,7 +65,10 @@ export const updateCategory = async (categoryId: string, categoryData: { name?: 
     const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido ao atualizar categoria.' }));
     throw new Error(errorData.message || `Erro ${response.status} ao atualizar categoria.`);
   }
-  return response.json();
+
+  const data = await response.json();
+
+  return data.category
 };
 
 export const deleteCategory = async (categoryId: string): Promise<{ message: string }> => {
@@ -87,5 +81,8 @@ export const deleteCategory = async (categoryId: string): Promise<{ message: str
     const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido ao excluir categoria.' }));
     throw new Error(errorData.message || `Erro ${response.status} ao excluir categoria.`);
   }
-  return response.json();
+  
+  const data = await response.json();
+
+  return data.category
 }; 

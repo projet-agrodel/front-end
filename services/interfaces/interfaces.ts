@@ -46,8 +46,11 @@ export interface Produto extends Timestamps {
   name: string;
   description: string;
   price: number;
+  originalPrice: number
+  imageUrl?: string;
+  status: string
+  isPromotion: boolean
   stock: number;
-  img?: string;
 
   // Relacionamentos
   carrinhoItens?: CarrinhoItem[];
@@ -58,6 +61,7 @@ export interface Produto extends Timestamps {
 export interface Categoria extends Timestamps {
   id: number;
   name: string;
+  productCount: number
 }
 
 export interface CarrinhoItem {

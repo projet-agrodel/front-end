@@ -78,28 +78,7 @@ function Sidebar() {
   );
 }
 
-// Componente Header (mantido similar, talvez ajustar padding)
-function Header() {
-  return (
-    <header className="bg-white shadow-sm h-16 flex items-center justify-between px-6 border-b border-gray-200">
-      <div>
-        {/* Pode ser dinâmico baseado na rota */}
-        <h1 className="text-lg font-semibold text-gray-900">Visão Geral</h1>
-      </div>
-      <div className="flex items-center space-x-5">
-        <AdvancedAnalyticsButton />
-        <button className="text-gray-500 hover:text-gray-700 relative">
-          <Bell size={22} />
-          {/* Badge de notificação (opcional) */}
-          <span className="absolute -top-1 -right-1 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white"></span>
-        </button>
-        <button className="text-gray-500 hover:text-gray-700">
-          <UserCircle size={28} />
-        </button>
-      </div>
-    </header>
-  );
-}
+
 
 // Layout Principal Atualizado
 export default function AdminLayout({
@@ -113,8 +92,6 @@ export default function AdminLayout({
     <div className="flex bg-gray-100 min-h-full">
       <Sidebar />
       <div className="flex-1 flex flex-col">
-        <Header />
-        {/* Ajustado bg e padding */}
         <main className="bg-gray-100 p-6">
           {children}
         </main>
