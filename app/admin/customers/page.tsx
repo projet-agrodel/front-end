@@ -1,246 +1,255 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Users, Search } from 'lucide-react'; // Ícone exemplo e Search
-import { useRouter } from 'next/navigation'; // Importar useRouter
+import React, { useState, useMemo } from 'react';
+import {
+    Users, Search, AlertTriangle, Eye, User as UserIcon, Mail, Phone, Calendar, Filter, Loader2, RotateCcw,
+} from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
+import { getAdminUsers } from '../../../services/userService';
+import { User } from '../../../services/interfaces/interfaces';
+import Link from 'next/link';
 
-// Interface para o tipo de usuário vindo da API
-interface ApiUser {
-  id: number;
-  name: string;
-  email: string;
-  phone?: string;
-  type: 'admin' | 'user';
-  created_at: string;
-  updated_at: string;
-}
-
-async function getCustomersData(): Promise<Customer[]> {
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users?type=user`);
-
-    if (!response.ok) {
-      console.error("Erro ao buscar clientes:", response.status, response.statusText);
-      // Lançar um erro ou retornar um array vazio pode ser mais apropriado
-      // dependendo de como você quer tratar erros na UI.
-      return [];
-    }
-    const usersFromApi: ApiUser[] = await response.json();
-
-    if (!Array.isArray(usersFromApi)) {
-      console.error("Resposta da API não é um array:", usersFromApi);
-      return [];
-    }
-
-    // Mapear os dados da API para a interface Customer
-    return usersFromApi.map((user: ApiUser) => ({
-      id: String(user.id), // Backend envia como número, frontend usa string
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      registrationDate: user.created_at, 
-      status: 'Ativo', 
-      type: user.type, 
-    }));
-  } catch (error) {
-    console.error("Falha ao buscar dados dos clientes:", error);
-    return []; 
-  }
-}
-
-// Tipagem para os dados do cliente
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string; // Campo opcional adicionado
-  registrationDate: string;
-  status: 'Ativo' | 'Bloqueado';
-  type: 'admin' | 'user'; // Campo adicionado
-}
-
-// Componente da Tabela de Clientes
-function CustomersTable({ customers }: { customers: Customer[] }) {
-  const router = useRouter(); // Inicializar o router
-
-  const handleRowClick = (customerId: string) => {
-    router.push(`/admin/customers/${customerId}`);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
-
-  const statusClasses: { [key in Customer['status']]: string } = {
-    'Ativo': 'bg-green-100 text-green-800',
-    'Bloqueado': 'bg-red-100 text-red-800',
-  };
-  const getStatusClass = (status: Customer['status']) => statusClasses[status] || 'bg-gray-100 text-gray-800';
-
-  return (
-    <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-200 mt-4">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
-              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">E-mail</th>
-              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Cadastro</th>
-              <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {customers.map((customer) => (
-              <tr
-                key={customer.id}
-                className="hover:bg-gray-100 cursor-pointer"
-                onClick={() => handleRowClick(customer.id)}
-              >
-                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{customer.name}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{customer.email}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{formatDate(customer.registrationDate)}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-center text-sm">
-                   <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(customer.status)}`}>
-                     {customer.status}
-                   </span>
-                 </td>
-              </tr>
-            ))}
-            {customers.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-4 text-center text-sm text-gray-500 italic">Nenhum cliente encontrado para os critérios selecionados.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-// Componente Principal da Página
 export default function AdminCustomersPage() {
-  const [allCustomers, setAllCustomers] = useState<Customer[]>([]); // Armazena todos os clientes
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const [selectedType, setSelectedType] = useState<'admin' | 'user' | ''>('');
 
-  const ITEMS_PER_PAGE = 5; // Define quantos itens por página
+    // Debounce para o termo de busca
+    React.useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
-  // Busca inicial de dados
-  useEffect(() => {
-    setLoading(true);
-    getCustomersData()
-      .then(data => {
-        setAllCustomers(data);
-      })
-      .catch(error => {
-        console.error("Erro ao buscar dados dos clientes:", error);
-        setAllCustomers([]); // Define como array vazio em caso de erro
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, []);
+    // Query para buscar os usuários
+    const { data, isLoading, error } = useQuery<User[]>({
+        queryKey: ['users', debouncedSearchTerm, selectedType],
+        queryFn: () => getAdminUsers({
+            query: debouncedSearchTerm,
+            type: selectedType,
+        })
+    });
 
-  // Filtra os clientes com base no searchTerm
-  const filteredCustomers = useMemo(() => {
-    if (!searchTerm) {
-      return allCustomers;
+    const formatDate = (dateString: string) => {
+        if (!dateString) return 'N/A';
+        try {
+            return new Date(dateString).toLocaleDateString('pt-BR', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        } catch (e) {
+            console.error("Erro ao formatar data:", dateString, e);
+            return 'Data inválida';
+        }
+    };
+    
+    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(event.target.value);
+    };
+
+    const handleTypeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedType(event.target.value as 'admin' | 'user' | '');
+    };
+
+    if (isLoading && !data) {
+        return (
+            <div className="flex justify-center items-center h-[calc(100vh-8rem)]">
+                <Loader2 className="h-12 w-12 animate-spin text-green-600" />
+                <p className="ml-4 text-lg text-gray-600">Carregando clientes...</p>
+            </div>
+        );
     }
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    return allCustomers.filter(customer =>
-      customer.name.toLowerCase().includes(lowerCaseSearchTerm) ||
-      customer.email.toLowerCase().includes(lowerCaseSearchTerm)
+
+    return (
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="container mx-auto p-4 md:p-6 lg:p-8"
+            >
+                <header className="mb-8">
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="flex items-center">
+                            <Users className="h-8 w-8 text-green-600 mr-3" />
+                            <h1 className="text-3xl font-bold text-gray-800">Gerenciamento de Clientes</h1>
+                        </div>
+                    </div>
+                </header>
+
+                <div className="mb-6 bg-white p-5 rounded-xl shadow-lg">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                        <div className="relative">
+                            <label htmlFor="search-users" className="sr-only">Pesquisar Clientes</label>
+                            <input
+                                id="search-users"
+                                type="text"
+                                placeholder="Pesquisar por Nome, Email, Telefone..."
+                                value={searchTerm}
+                                onChange={handleSearchChange}
+                                disabled={isLoading}
+                                className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow shadow-sm hover:shadow-md text-sm disabled:bg-gray-100"
+                            />
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        </div>
+                        <div className="relative">
+                            <label htmlFor="type-filter" className="sr-only">Filtrar por Tipo</label>
+                            <select
+                                id="type-filter"
+                                value={selectedType}
+                                onChange={handleTypeChange}
+                                disabled={isLoading}
+                                className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow shadow-sm hover:shadow-md text-sm appearance-none bg-white disabled:bg-gray-100"
+                            >
+                                <option value="">Todos os Tipos</option>
+                                <option value="admin">Administradores</option>
+                                <option value="user">Clientes</option>
+                            </select>
+                            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        </div>
+                    </div>
+                </div>
+                
+                {isLoading && (
+                    <div className="flex justify-center items-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin text-green-600" />
+                        <p className="ml-2 text-gray-500">Atualizando lista de clientes...</p>
+                    </div>
+                )}
+
+                {error && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-md shadow-md"
+                    >
+                        <div className="flex">
+                            <AlertTriangle className="h-5 w-5 text-red-500 mr-3" />
+                            <div>
+                                <p className="font-semibold">Erro ao Carregar Clientes</p>
+                                <p className="text-sm">{error instanceof Error ? error.message : "Erro desconhecido"}</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {!isLoading && !error && (!data || data.length === 0) && (
+                    <div className="text-center py-10 px-6 bg-white shadow-xl rounded-lg">
+                        <Users size={56} className="mx-auto text-gray-400 mb-5" />
+                        <h3 className="text-2xl font-semibold text-gray-700 mb-3">
+                            {debouncedSearchTerm || selectedType ? "Nenhum cliente encontrado" : "Nenhum cliente registrado"}
+                        </h3>
+                        <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                            {debouncedSearchTerm || selectedType 
+                                ? "Sua busca ou filtro não retornou resultados. Tente refinar seus termos ou limpar os filtros."
+                                : "Parece que ainda não há clientes registrados no sistema."}
+                        </p>
+                        {(debouncedSearchTerm || selectedType) && (
+                            <button
+                                onClick={() => { setSearchTerm(''); setSelectedType(''); }}
+                                className="flex items-center mx-auto bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2.5 px-6 rounded-lg shadow hover:shadow-md transition-all duration-150 ease-in-out disabled:opacity-50"
+                                disabled={isLoading}
+                            >
+                                <RotateCcw size={18} className="mr-2" />
+                                Limpar Busca/Filtros
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {data && data.length > 0 && (
+                    <motion.div 
+                        className="bg-white shadow-xl rounded-lg overflow-hidden"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-100">
+                                    <tr>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cliente</th>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Contato</th>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tipo</th>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cadastro</th>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[120px]">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {data.map((user: User) => (
+                                        <motion.tr 
+                                            key={user.id} 
+                                            className="hover:bg-gray-50 transition-colors duration-150 even:bg-white odd:bg-gray-50/50"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            layout
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            <td className="px-6 py-4 align-top">
+                                                <div className="flex items-center">
+                                                    {user.avatar ? (
+                                                        <img src={user.avatar} alt={user.name} className="h-10 w-10 rounded-full mr-3" />
+                                                    ) : (
+                                                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                                                            <UserIcon className="h-6 w-6 text-gray-500" />
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <div className="text-sm font-semibold text-gray-900">{user.name}</div>
+                                                        <div className="text-xs text-gray-500">ID: {user.id}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 align-top">
+                                                <div className="flex items-center text-sm text-gray-600">
+                                                    <Mail className="h-4 w-4 mr-2" />
+                                                    {user.email}
+                                                </div>
+                                                {user.phone && (
+                                                    <div className="flex items-center text-sm text-gray-600 mt-1">
+                                                        <Phone className="h-4 w-4 mr-2" />
+                                                        {user.phone}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 align-top">
+                                                <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                    user.type === 'admin' 
+                                                        ? 'bg-purple-100 text-purple-800' 
+                                                        : 'bg-green-100 text-green-800'
+                                                }`}>
+                                                    {user.type === 'admin' ? 'Administrador' : 'Cliente'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 align-top">
+                                                <div className="flex items-center">
+                                                    <Calendar className="h-4 w-4 mr-2" />
+                                                    {formatDate(user.created_at)}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 align-top text-center">
+                                                <Link href={`/admin/customers/${user.id}`}>
+                                                    <motion.button 
+                                                        className="p-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-100 rounded-full transition-all duration-150 disabled:opacity-50"
+                                                        title="Ver Detalhes"
+                                                        whileHover={{scale: 1.1}} whileTap={{scale: 0.9}}
+                                                        disabled={isLoading}
+                                                    >
+                                                        <Eye size={18} />
+                                                    </motion.button>
+                                                </Link>
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
+                )}
+            </motion.div>
+        </AnimatePresence>
     );
-  }, [allCustomers, searchTerm]);
-
-  // Calcula o total de páginas
-  const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE);
-
-  // Obtém os clientes para a página atual
-  const paginatedCustomers = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return filteredCustomers.slice(startIndex, endIndex);
-  }, [filteredCustomers, currentPage, ITEMS_PER_PAGE]);
-
-  // Funções para mudar de página
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  // Atualiza a página para 1 quando o termo de busca muda
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
-  if (loading) {
-    return <div className="flex items-center justify-center h-full">Carregando clientes...</div>;
-  }
-
-  if (!allCustomers) { // Verifica allCustomers pois ele é setado mesmo em erro
-     return <div className="flex items-center justify-center h-full text-red-600">Erro ao carregar dados dos clientes.</div>;
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Título e Barra de Busca */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl font-semibold text-gray-800 flex items-center">
-          <Users size={22} className="mr-2 text-gray-600" /> Lista de Clientes ({filteredCustomers.length})
-        </h2>
-        <div className="relative w-full sm:w-64">
-          <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Buscar por nome ou e-mail..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm w-full"
-          />
-        </div>
-      </div>
-
-      {/* Tabela de Clientes */}
-      <CustomersTable customers={paginatedCustomers} />
-
-      {/* Controles de Paginação */}
-      {totalPages > 1 && (
-        <div className="flex justify-between items-center mt-4 text-sm text-gray-700">
-          <span>
-            Página {currentPage} de {totalPages}
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={handlePrevPage}
-              disabled={currentPage === 1}
-              className="px-3 py-1 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Anterior
-            </button>
-            <button
-              onClick={handleNextPage}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Próximo
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
 } 
