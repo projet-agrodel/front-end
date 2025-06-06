@@ -1,119 +1,68 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     ShoppingCart, Search, AlertTriangle, Eye, Edit, Trash2, Package, Users, DollarSign, TrendingUp, Filter, Loader2, RotateCcw, Truck, CheckCircle, XCircle,
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     getAdminOrders,
-    // getAdminOrderById, // Para detalhes futuros
-    updateAdminOrderStatus, // Para edição de status futura
-    type Order, type OrderStatus, type PaginatedOrdersResponse
-} from '../../../services/orderService'; // Ajuste o caminho se necessário
-
-// Interfaces para os dados de Pedido
-interface OrderItem {
-    id: string;
-    productId: string;
-    productName: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-    imageUrl?: string;
-}
-
-interface CustomerInfo {
-    id: string;
-    name: string;
-    email: string;
-    phone?: string;
-}
+    updateAdminOrderStatus,
+    type OrderStatus,
+} from '../../../services/orderService';
+import { Pedido } from '../../../services/interfaces/interfaces';
 
 const ITEMS_PER_PAGE = 10;
 
-const statusOptions: OrderStatus[] = ['Pendente', 'Processando', 'Enviado', 'Entregue', 'Cancelado'];
+const statusOptions: OrderStatus[] = ['Em Processamento', 'Não autorizado', 'Concluido'];
 
 const statusColors: Record<OrderStatus, string> = {
-    'Pendente': 'bg-yellow-100 text-yellow-800 ring-yellow-200',
-    'Processando': 'bg-blue-100 text-blue-800 ring-blue-200',
-    'Enviado': 'bg-indigo-100 text-indigo-800 ring-indigo-200',
-    'Entregue': 'bg-green-100 text-green-800 ring-green-200',
-    'Cancelado': 'bg-red-100 text-red-800 ring-red-200',
+    'Em Processamento': 'bg-yellow-100 text-yellow-800 ring-yellow-200',
+    'Não autorizado': 'bg-red-100 text-red-800 ring-red-200',
+    'Concluido': 'bg-green-100 text-green-800 ring-green-200',
 };
 
 const statusIcons: Record<OrderStatus, React.JSX.Element> = {
-    'Pendente': <Loader2 size={14} className="mr-1.5 animate-spin" />,
-    'Processando': <RotateCcw size={14} className="mr-1.5" />,
-    'Enviado': <Truck size={14} className="mr-1.5" />,
-    'Entregue': <CheckCircle size={14} className="mr-1.5" />,
-    'Cancelado': <XCircle size={14} className="mr-1.5" />,
+    'Em Processamento': <Loader2 size={14} className="mr-1.5 animate-spin" />,
+    'Não autorizado': <XCircle size={14} className="mr-1.5" />,
+    'Concluido': <CheckCircle size={14} className="mr-1.5" />,
 };
 
 export default function AdminOrdersPage() {
-    const [orders, setOrders] = useState<Order[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [selectedStatus, setSelectedStatus] = useState<OrderStatus | ''>('');
-
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalOrders, setTotalOrders] = useState(0);
+    const queryClient = useQueryClient();
 
-    const fetchOrders = useCallback(async (pageToFetch = currentPage, search = debouncedSearchTerm, status = selectedStatus) => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const data: PaginatedOrdersResponse = await getAdminOrders({
-                page: pageToFetch,
-                per_page: ITEMS_PER_PAGE,
-                search: search,
-                status: status,
-            });
-            setOrders(data.orders);
-            setTotalPages(data.total_pages);
-            setTotalOrders(data.total_orders);
-            if (pageToFetch > data.total_pages && data.total_pages > 0) {
-                setCurrentPage(data.total_pages); // Ajusta se a página atual for inválida
-            } else if (data.total_pages === 0 && pageToFetch !==1) {
-                setCurrentPage(1); // Reseta para pagina 1 se não houver resultados
-            }
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "Falha ao carregar pedidos.";
-            setError(errorMessage);
-            setOrders([]);
-            setTotalPages(0);
-            setTotalOrders(0);
-            console.error(err);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [currentPage, debouncedSearchTerm, selectedStatus]); // Removido fetchOrders da lista de dependências
-
-    useEffect(() => {
+    // Debounce para o termo de busca
+    React.useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearchTerm(searchTerm);
-        }, 500); // 500ms debounce
+        }, 500);
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    useEffect(() => {
-        // Se o termo de busca ou status mudou, resetamos para a primeira página
-        if (currentPage !== 1 && (debouncedSearchTerm !== searchTermRef.current.debounced || selectedStatus !== searchTermRef.current.status) ) {
-            setCurrentPage(1);
-            fetchOrders(1, debouncedSearchTerm, selectedStatus);
-        } else {
-            fetchOrders(currentPage, debouncedSearchTerm, selectedStatus);
-        }
-        // Guardar os valores atuais para comparação na próxima renderização
-        searchTermRef.current = { debounced: debouncedSearchTerm, status: selectedStatus };
-    }, [debouncedSearchTerm, selectedStatus, currentPage, fetchOrders]);
+    // Query para buscar os pedidos
+    const { data, isLoading, error, refetch } = useQuery<Pedido[]>({
+        queryKey: ['orders', currentPage, debouncedSearchTerm, selectedStatus],
+        queryFn: () => getAdminOrders({
+            page: currentPage,
+            search: debouncedSearchTerm,
+            status: selectedStatus as OrderStatus,
+        })
+    });
 
-    // Usar ref para guardar valores anteriores de debouncedSearchTerm e selectedStatus para o useEffect acima
-    const searchTermRef = React.useRef({debounced: debouncedSearchTerm, status: selectedStatus});
+    // Mutation para atualizar o status do pedido
+    const updateStatusMutation = useMutation({
+        mutationFn: ({ orderId, status }: { orderId: string; status: OrderStatus }) => 
+            updateAdminOrderStatus(orderId, status),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+        },
+    });
 
     const formatCurrency = (value: number) => {
         return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -134,56 +83,40 @@ export default function AdminOrdersPage() {
     
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(event.target.value);
-        // setCurrentPage(1); // Removido, o useEffect de debouncedSearchTerm cuidará disso
+        setCurrentPage(1);
     };
 
     const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedStatus(event.target.value as OrderStatus | '');
-        // setCurrentPage(1); // Removido, o useEffect de selectedStatus cuidará disso
+        setCurrentPage(1);
     };
 
-    const handleViewDetails = (order: Order) => {
+    const handleViewDetails = (order: Pedido) => {
         console.log("Ver detalhes (futuramente com modal e getAdminOrderById):", order);
-        // Ex: setIsViewModalOpen(true); setCurrentDetailedOrder(await getAdminOrderById(order.id));
     };
 
-    const handleEditStatus = async (order: Order, newStatus: OrderStatus) => {
+    const handleEditStatus = async (order: Pedido, newStatus: OrderStatus) => {
         if (order.status === newStatus) return;
-        // TODO: Implementar modal de confirmação e seleção de status aqui.
-        // Por agora, vamos simular uma atualização direta para fins de teste da API.
-        console.log(`Tentando atualizar status do pedido ${order.id} para ${newStatus}`);
         try {
-            // setIsLoading(true); // Poderia ter um loading específico para a linha/botão
-            await updateAdminOrderStatus(order.id, newStatus);
-            // alert(`Status do pedido ${order.orderNumber} atualizado para ${newStatus}`);
-            fetchOrders(currentPage); // Re-fetch a lista atual para refletir a mudança
+            await updateStatusMutation.mutateAsync({ orderId: order.id.toString(), status: newStatus });
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "Falha ao atualizar status.";
-            setError(errorMessage); // Mostrar erro global ou específico
-            // alert(`Erro ao atualizar status: ${errorMessage}`);
-        } finally {
-            // setIsLoading(false);
+            console.error("Erro ao atualizar status:", err);
         }
     };
-    
-    // Mock de handleEditStatus para o botão, futuramente um modal abriria para selecionar o status
-    const triggerEditStatus = (order: Order) => {
-        // Simulando a seleção de um novo status. Idealmente, um modal/dropdown permitiria ao usuário escolher.
+
+    const triggerEditStatus = (order: Pedido) => {
         const nextStatusCycle: Record<OrderStatus, OrderStatus> = {
-            'Pendente': 'Processando',
-            'Processando': 'Enviado',
-            'Enviado': 'Entregue',
-            'Entregue': 'Entregue', // não muda mais
-            'Cancelado': 'Cancelado' // não muda mais
+            'Em Processamento': 'Concluido',
+            'Não autorizado': 'Em Processamento',
+            'Concluido': 'Concluido'
         };
-        const newStatus = nextStatusCycle[order.status];
+        const newStatus = nextStatusCycle[order.status as OrderStatus];
         if (order.status !== newStatus) {
-          // Adicionar uma confirmação antes de mudar
-          if(confirm(`Deseja alterar o status do pedido ${order.orderNumber} de "${order.status}" para "${newStatus}"?`)){
-            handleEditStatus(order, newStatus);
-          }
+            if(confirm(`Deseja alterar o status do pedido ${order.id} de "${order.status}" para "${newStatus}"?`)){
+                handleEditStatus(order, newStatus);
+            }
         } else {
-            alert("O pedido já está no estado final (Entregue ou Cancelado) ou não há próximo estado definido.");
+            alert("O pedido já está no estado final (Concluido) ou não há próximo estado definido.");
         }
     };
 
@@ -206,27 +139,33 @@ export default function AdminOrdersPage() {
     );
 
     const summaryData = useMemo(() => {
-        // totalOrders agora vem do backend
-        // pendingOrders precisaria de uma chamada específica ou cálculo no backend.
-        // Por ora, vamos simular ou calcular com base nos dados da página atual (o que não é ideal).
-        const pendingOnPage = orders.filter(o => o.status === 'Pendente').length;
-        
-        // Receita e Ticket Médio também seriam idealmente do backend.
-        // Calculando com base nos pedidos da página atual (não reflete o total real)
-        const revenueOnPage = orders.filter(o => o.status === 'Entregue' || o.status === 'Enviado' || o.status === 'Processando').reduce((sum, o) => sum + o.totalAmount, 0);
-        const relevantOrdersForAvgOnPage = orders.filter(o => o.status === 'Entregue' || o.status === 'Enviado' || o.status === 'Processando');
+        if (!data) return {
+            totalOrders: { value: '0', trend: "Total no sistema" },
+            pendingOrders: { value: '0', trend: "" },
+            totalRevenue: { value: formatCurrency(0), trend: "" },
+            avgOrderValue: { value: formatCurrency(0), trend: "" },
+        };
+
+        const pendingOnPage = data.filter((o: Pedido) => o.status === 'Em Processamento').length;
+        const revenueOnPage = data.filter((o: Pedido) => o.status === 'Concluido').reduce((sum: number, o: Pedido) => sum + o.amount, 0);
+        const relevantOrdersForAvgOnPage = data.filter((o: Pedido) => o.status === 'Concluido');
         const avgValueOnPage = relevantOrdersForAvgOnPage.length > 0 ? revenueOnPage / relevantOrdersForAvgOnPage.length : 0;
 
         return {
-            totalOrders: { value: String(totalOrders), trend: "Total no sistema" }, // Usando totalOrders do estado
-            pendingOrders: { value: String(pendingOnPage), trend: isLoading ? "" : `${pendingOnPage} nesta página` }, // Simulado
-            totalRevenue: { value: formatCurrency(revenueOnPage), trend: isLoading ? "" : "Receita (pág. atual)" }, // Simulado
-            avgOrderValue: { value: formatCurrency(isNaN(avgValueOnPage) ? 0 : avgValueOnPage), trend: isLoading ? "" : "Ticket Médio (pág. atual)" }, // Simulado
+            totalOrders: { value: String(data.length), trend: "Total no sistema" },
+            pendingOrders: { value: String(pendingOnPage), trend: isLoading ? "" : `${pendingOnPage} nesta página` },
+            totalRevenue: { value: formatCurrency(revenueOnPage), trend: isLoading ? "" : "Receita (pág. atual)" },
+            avgOrderValue: { value: formatCurrency(isNaN(avgValueOnPage) ? 0 : avgValueOnPage), trend: isLoading ? "" : "Ticket Médio (pág. atual)" },
         };
-    }, [orders, totalOrders, isLoading]);
+    }, [data, isLoading]);
 
+    const paginatedOrders = useMemo(() => {
+        if (!data) return [];
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return data.slice(start, start + ITEMS_PER_PAGE);
+    }, [data, currentPage]);
 
-    if (isLoading && orders.length === 0 && currentPage === 1 && !debouncedSearchTerm && !selectedStatus) {
+    if (isLoading && !data) {
         return (
             <div className="flex justify-center items-center h-[calc(100vh-8rem)]">
                 <Loader2 className="h-12 w-12 animate-spin text-green-600" />
@@ -235,7 +174,7 @@ export default function AdminOrdersPage() {
         );
     }
 
-  return (
+    return (
         <AnimatePresence>
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -258,7 +197,7 @@ export default function AdminOrdersPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.2 } }}
                 >
-                    <SummaryCard title="Total de Pedidos" value={summaryData.totalOrders.value} icon={<Package size={20} />} trend={summaryData.totalOrders.trend} isLoadingCard={isLoading && totalOrders === 0} />
+                    <SummaryCard title="Total de Pedidos" value={summaryData.totalOrders.value} icon={<Package size={20} />} trend={summaryData.totalOrders.trend} isLoadingCard={isLoading} />
                     <SummaryCard title="Pendentes (na página)" value={summaryData.pendingOrders.value} icon={<Loader2 size={20} />} trend={summaryData.pendingOrders.trend} isLoadingCard={isLoading} />
                     <SummaryCard title="Receita (pág. atual)" value={summaryData.totalRevenue.value} icon={<DollarSign size={20} />} trend={summaryData.totalRevenue.trend} isLoadingCard={isLoading} />
                     <SummaryCard title="Ticket Médio (pág. atual)" value={summaryData.avgOrderValue.value} icon={<TrendingUp size={20} />} trend={summaryData.avgOrderValue.trend} isLoadingCard={isLoading} />
@@ -298,7 +237,7 @@ export default function AdminOrdersPage() {
                     </div>
                 </div>
                 
-                {(isLoading && orders.length > 0) && (
+                {isLoading && (
                     <div className="flex justify-center items-center py-4">
                         <Loader2 className="h-6 w-6 animate-spin text-green-600" />
                         <p className="ml-2 text-gray-500">Atualizando lista de pedidos...</p>
@@ -315,9 +254,9 @@ export default function AdminOrdersPage() {
                             <AlertTriangle className="h-5 w-5 text-red-500 mr-3" />
                             <div>
                                 <p className="font-semibold">Erro ao Carregar Pedidos</p>
-                                <p className="text-sm">{error}</p>
+                                <p className="text-sm">{error instanceof Error ? error.message : "Erro desconhecido"}</p>
                                 <button 
-                                    onClick={() => fetchOrders(1, '', '')} 
+                                    onClick={() => queryClient.invalidateQueries({ queryKey: ['orders'] })} 
                                     className="mt-2 text-sm text-red-600 hover:text-red-800 font-medium underline"
                                 >
                                     Tentar Novamente (Limpar Filtros)
@@ -327,7 +266,7 @@ export default function AdminOrdersPage() {
                     </motion.div>
                 )}
 
-                {!isLoading && !error && orders.length === 0 && (
+                {!isLoading && !error && (!data || data.length === 0) && (
                      <div className="text-center py-10 px-6 bg-white shadow-xl rounded-lg">
                         <ShoppingCart size={56} className="mx-auto text-gray-400 mb-5" />
                         <h3 className="text-2xl font-semibold text-gray-700 mb-3">
@@ -340,7 +279,7 @@ export default function AdminOrdersPage() {
                         </p>
                          {(debouncedSearchTerm || selectedStatus) && (
                             <button
-                                onClick={() => { setSearchTerm(''); setSelectedStatus(''); setCurrentPage(1); /* fetchOrders será chamado pelo useEffect */}}
+                                onClick={() => { setSearchTerm(''); setSelectedStatus(''); setCurrentPage(1); }}
                                 className="flex items-center mx-auto bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2.5 px-6 rounded-lg shadow hover:shadow-md transition-all duration-150 ease-in-out disabled:opacity-50"
                                 disabled={isLoading}
                             >
@@ -351,7 +290,7 @@ export default function AdminOrdersPage() {
                     </div>
                 )}
 
-                {orders.length > 0 && (
+                {data && data.length > 0 && (
                     <motion.div 
                         className="bg-white shadow-xl rounded-lg overflow-hidden"
                         initial={{ opacity: 0 }}
@@ -368,11 +307,11 @@ export default function AdminOrdersPage() {
                                         <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Itens</th>
                                         <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Valor Total</th>
                                         <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[120px] text-center">Ações</th>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[120px]">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {orders.map((order) => (
+                                    {paginatedOrders.map((order: Pedido) => (
                                         <motion.tr 
                                             key={order.id} 
                                             className="hover:bg-gray-50 transition-colors duration-150 even:bg-white odd:bg-gray-50/50"
@@ -382,19 +321,19 @@ export default function AdminOrdersPage() {
                                             transition={{ duration: 0.3 }}
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap align-top">
-                                                <div className="text-sm font-medium text-green-600 hover:text-green-700 cursor-pointer" onClick={() => handleViewDetails(order)}>#{order.orderNumber}</div>
+                                                <div className="text-sm font-medium text-green-600 hover:text-green-700 cursor-pointer" onClick={() => handleViewDetails(order)}>#{order.id}</div>
                                             </td>
                                             <td className="px-6 py-4 align-top">
-                                                <div className="text-sm font-semibold text-gray-900">{order.customer.name}</div>
-                                                <div className="text-xs text-gray-500">{order.customer.email}</div>
-                                                {order.customer.phone && <div className="text-xs text-gray-500">{order.customer.phone}</div>}
+                                                <div className="text-sm font-semibold text-gray-900">{order.user?.name}</div>
+                                                <div className="text-xs text-gray-500">{order.user?.email}</div>
+                                                {order.user?.phone && <div className="text-xs text-gray-500">{order.user.phone}</div>}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 align-top">{formatDate(order.orderDate)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 align-top text-center">{order.itemCount}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-800 align-top">{formatCurrency(order.totalAmount)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 align-top">{formatDate(order.created_at)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 align-top text-center">{order.items?.length || 0}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-800 align-top">{formatCurrency(order.amount)}</td>
                                             <td className="px-6 py-4 whitespace-nowrap align-top">
-                                                <span className={`px-3 py-1.5 inline-flex items-center text-xs leading-5 font-semibold rounded-full ring-1 ${statusColors[order.status]}`}>
-                                                    {statusIcons[order.status] || <Loader2 size={14} className="mr-1.5 animate-spin" />}{/* Fallback icon */}
+                                                <span className={`px-3 py-1.5 inline-flex items-center text-xs leading-5 font-semibold rounded-full ring-1 ${statusColors[order.status as OrderStatus]}`}>
+                                                    {statusIcons[order.status as OrderStatus] || <Loader2 size={14} className="mr-1.5 animate-spin" />}
                                                     {order.status}
                                                 </span>
                                             </td>
@@ -411,9 +350,9 @@ export default function AdminOrdersPage() {
                                                 <motion.button 
                                                     onClick={() => triggerEditStatus(order)} 
                                                     className="p-1.5 text-orange-500 hover:text-orange-700 hover:bg-orange-100 rounded-full transition-all duration-150 disabled:opacity-50"
-                                                    title="Atualizar Status (Simulado)"
+                                                    title="Atualizar Status"
                                                     whileHover={{scale: 1.1}} whileTap={{scale: 0.9}}
-                                                    disabled={isLoading || order.status === 'Entregue' || order.status === 'Cancelado'}
+                                                    disabled={isLoading || order.status === 'Concluido' || updateStatusMutation.isPending}
                                                 >
                                                     <Edit size={18} />
                                                 </motion.button>
@@ -424,10 +363,10 @@ export default function AdminOrdersPage() {
                             </table>
                         </div>
                          {/* Paginação */} 
-                        {totalPages > 0 && (
+                        {Math.ceil((data.length || 0) / ITEMS_PER_PAGE) > 0 && (
                             <div className="py-4 px-6 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                                 <p className="text-sm text-gray-700">
-                                    Página <span className="font-semibold">{currentPage}</span> de <span className="font-semibold">{totalPages}</span> (<span className="font-semibold">{totalOrders}</span> pedidos)
+                                    Página <span className="font-semibold">{currentPage}</span> de <span className="font-semibold">{Math.ceil((data.length || 0) / ITEMS_PER_PAGE)}</span> (<span className="font-semibold">{data.length}</span> pedidos)
                                 </p>
                                 <div className="flex items-center space-x-1.5">
                                     <motion.button
@@ -450,8 +389,8 @@ export default function AdminOrdersPage() {
                                     </motion.button>
                                     <span className="px-2 text-sm">Página {currentPage}</span>
                                     <motion.button
-                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                        disabled={currentPage === totalPages || isLoading}
+                                        onClick={() => setCurrentPage(prev => Math.min(Math.ceil((data.length || 0) / ITEMS_PER_PAGE), prev + 1))}
+                                        disabled={currentPage === Math.ceil((data.length || 0) / ITEMS_PER_PAGE) || isLoading}
                                         className="p-2 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                         title="Próxima Página"
                                         whileHover={{scale: 1.05}} whileTap={{scale: 0.95}}
@@ -459,8 +398,8 @@ export default function AdminOrdersPage() {
                                         <ChevronRight size={20} />
                                     </motion.button>
                                     <motion.button
-                                        onClick={() => setCurrentPage(totalPages)}
-                                        disabled={currentPage === totalPages || isLoading}
+                                        onClick={() => setCurrentPage(Math.ceil((data.length || 0) / ITEMS_PER_PAGE))}
+                                        disabled={currentPage === Math.ceil((data.length || 0) / ITEMS_PER_PAGE) || isLoading}
                                         className="p-2 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                         title="Última Página"
                                         whileHover={{scale: 1.05}} whileTap={{scale: 0.95}}
@@ -472,8 +411,7 @@ export default function AdminOrdersPage() {
                         )}
                     </motion.div>
                 )}
-                {/* Modais para Detalhes e Edição de Status irão aqui */}
             </motion.div>
         </AnimatePresence>
-  );
+    );
 } 
