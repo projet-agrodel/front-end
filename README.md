@@ -1,37 +1,59 @@
-### Agrodrel Front-End
+# 🌿 Agrodel - Front-End
 
-Este é o repositório do frontend da aplicação. Siga os passos abaixo para rodar o projeto localmente.
+Este é o repositório do **front-end** da aplicação **Agrodel**. O projeto foi desenvolvido utilizando **Node.js** e **Next.js**, com um foco em desempenho e experiência do usuário.
 
-## Requisitos
+Se você deseja rodar a interface localmente, siga os passos abaixo.
 
-- [Node.js](https://nodejs.org/) instalado (versão recomendada: LTS) | Versão > 20
-- [npm](https://www.npmjs.com/) instalado (geralmente já vem com o Node.js)
+> Para acessar o repositório do back-end, vá para: [Agrodel Back-End](https://github.com/projet-agrodel/back-end)
 
+---
 
-## Como rodar o frontend
+## ✅ Requisitos
 
-1. Clone este repositório:
+Antes de iniciar, certifique-se de que os seguintes softwares estão instalados em sua máquina:
+
+* [Node.js](https://nodejs.org/) (versão recomendada: LTS 20 ou superior)
+
+---
+
+## 🚀 Como executar o projeto localmente
+
+1. **Clone este repositório:**
 
 ```bash
 git clone https://github.com/projet-agrodel/front-end
-cd front-end
-````
 
-2. Instale as dependências:
+cd front-end
+```
+
+2. **Instale as dependências:**
 
 ```bash
 npm install
 ```
 
-3. Crie um arquivo .env na raiz do projeto e copie o contéudo de .env.example e cole lá
+3. **Configure as variáveis de ambiente:**
 
-4. Inicie o servidor de desenvolvimento:
+Crie um arquivo `.env` na raiz do projeto com base no `.env.example`.
+
+```bash
+cp .env.example .env
+```
+
+4. **Inicie o servidor de desenvolvimento:**
 
 ```bash
 npm run dev
 ```
 
-5. Acesse a aplicação em [http://localhost:3000](http://localhost:3000)
+5. **Acesse a aplicação em:**
 
-Após a instalação, você poderá ir para o [Back end](https://github.com/projet-agrodel/back-end)
+- [http://localhost:3000](http://localhost:3000)
 
+---
+
+## 🔗 Repositório do Back-End
+
+Caso ainda não tenha configurado o back-end da aplicação, acesse o repositório correspondente:
+
+➡️ [Agrodel Back-End](https://github.com/projet-agrodel/back-end)
