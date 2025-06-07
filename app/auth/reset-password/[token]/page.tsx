@@ -68,7 +68,7 @@ const ResetPasswordPage = () => {
       setNewPassword('');
       setConfirmPassword('');
       setTimeout(() => {
-        router.push('/login');
+        router.push('/auth/login');
       }, 3000);
 
     } catch (error) {
