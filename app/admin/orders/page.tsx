@@ -2,14 +2,13 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-    ShoppingCart, Search, AlertTriangle, Eye, Edit, Trash2, Package, Users, DollarSign, TrendingUp, Filter, Loader2, RotateCcw, Truck, CheckCircle, XCircle,
+    ShoppingCart, Search, AlertTriangle, Eye, Package, DollarSign, TrendingUp, Filter, Loader2, RotateCcw, CheckCircle, XCircle,
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     getAdminOrders,
-    updateAdminOrderStatus,
     type OrderStatus,
 } from '../../../services/orderService';
 import { Pedido } from '../../../services/interfaces/interfaces';
@@ -46,22 +45,13 @@ export default function AdminOrdersPage() {
     }, [searchTerm]);
 
     // Query para buscar os pedidos
-    const { data, isLoading, error, refetch } = useQuery<Pedido[]>({
+    const { data, isLoading, error } = useQuery<Pedido[]>({
         queryKey: ['orders', currentPage, debouncedSearchTerm, selectedStatus],
         queryFn: () => getAdminOrders({
             page: currentPage,
             search: debouncedSearchTerm,
             status: selectedStatus as OrderStatus,
         })
-    });
-
-    // Mutation para atualizar o status do pedido
-    const updateStatusMutation = useMutation({
-        mutationFn: ({ orderId, status }: { orderId: string; status: OrderStatus }) => 
-            updateAdminOrderStatus(orderId, status),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['orders'] });
-        },
     });
 
     const formatCurrency = (value: number) => {
@@ -93,31 +83,6 @@ export default function AdminOrdersPage() {
 
     const handleViewDetails = (order: Pedido) => {
         console.log("Ver detalhes (futuramente com modal e getAdminOrderById):", order);
-    };
-
-    const handleEditStatus = async (order: Pedido, newStatus: OrderStatus) => {
-        if (order.status === newStatus) return;
-        try {
-            await updateStatusMutation.mutateAsync({ orderId: order.id.toString(), status: newStatus });
-        } catch (err) {
-            console.error("Erro ao atualizar status:", err);
-        }
-    };
-
-    const triggerEditStatus = (order: Pedido) => {
-        const nextStatusCycle: Record<OrderStatus, OrderStatus> = {
-            'Em Processamento': 'Concluido',
-            'Não autorizado': 'Em Processamento',
-            'Concluido': 'Concluido'
-        };
-        const newStatus = nextStatusCycle[order.status as OrderStatus];
-        if (order.status !== newStatus) {
-            if(confirm(`Deseja alterar o status do pedido ${order.id} de "${order.status}" para "${newStatus}"?`)){
-                handleEditStatus(order, newStatus);
-            }
-        } else {
-            alert("O pedido já está no estado final (Concluido) ou não há próximo estado definido.");
-        }
     };
 
     const SummaryCard = ({ title, value, icon, trend, isLoadingCard }: { title: string, value: string, icon: React.JSX.Element, trend?: string, isLoadingCard?: boolean }) => (

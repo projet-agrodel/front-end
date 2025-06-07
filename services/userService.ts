@@ -1,4 +1,5 @@
 import { User } from './interfaces/interfaces';
+import { getAuthTokenForAdmin } from "@/utils/authAdmin";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -26,9 +27,33 @@ export const getAdminUsers = async (params: {
     if (params.query) queryParams.append('query', params.query);
     if (params.type) queryParams.append('type', params.type);
 
-    return fetchApi(`users?${queryParams.toString()}`, { method: 'GET' });
+    const token = await getAuthTokenForAdmin();
+    return fetchApi(`users?${queryParams.toString()}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        },
+    });
 };
 
 export const getAdminUserById = async (userId: string): Promise<User> => {
     return fetchApi(`users/${userId}`, { method: 'GET' });
+};
+
+export const updateUserStatus = async (userId: string, status: 'ativo' | 'bloqueado', token: string) => {
+    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/status`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Falha ao atualizar o status do usuário.');
+    }
+
+    return response.json();
 }; 
