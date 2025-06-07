@@ -11,8 +11,6 @@ import { z } from 'zod';
 import { signIn } from 'next-auth/react';
 import ForgotPasswordPopup from '../_components/ForgotPasswordPopup';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
 // Schema de validação com Zod
 const loginSchema = z.object({
   email: z.string()
@@ -34,7 +32,7 @@ const LoginPage = () => {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
@@ -48,11 +46,13 @@ const LoginPage = () => {
       });
 
       if (result?.error) {
-        setError('Erro na autenticação, por favor tente novamente.');
+        setError(result.error);
         return;
       }
 
-      router.push('/');
+      if (result?.ok) {
+        router.push('/');
+      }
       
     } catch (err) {
       console.error('Login error:', err);

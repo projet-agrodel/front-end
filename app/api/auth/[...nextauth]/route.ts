@@ -28,8 +28,12 @@ export const authOptions: AuthOptions = {
 
           const data = await response.json();
 
-          if (!response.ok || !data) {
-            throw new Error(data.message || 'Credenciais inválidas ou token não retornado');
+          if (!response.ok) {
+            throw new Error(data.message || 'Credenciais inválidas.');
+          }
+
+          if (!data?.user || !data?.access_token) {
+            throw new Error('Dados de autenticação inválidos recebidos da API.');
           }
 
           return {
@@ -41,8 +45,9 @@ export const authOptions: AuthOptions = {
           } as AuthUser;
           
         } catch (error) {
-          console.error('Erro na autenticação:', error);
-          return null;
+          const e = error as Error;
+          console.error('Erro na autenticação:', e.message);
+          throw new Error(e.message || 'Ocorreu um erro durante a autenticação.');
         }
       }
     })
