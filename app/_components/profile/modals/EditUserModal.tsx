@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { User } from '../types';
+import { User as UserIcon, Mail, Phone } from 'lucide-react';
+import { User } from '@/services/interfaces/interfaces';
 import { Modal } from './Modal';
 
 type EditUserModalProps = {
@@ -13,13 +14,17 @@ export const EditUserModal = ({ isOpen, onClose, user, onUpdate }: EditUserModal
   const [formData, setFormData] = useState({
     name: user.name,
     email: user.email,
-    phone: user.phone
+    phone: user.phone || ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
-      // Aqui você faria a chamada à API para atualizar os dados
+      // Simula chamada à API
+      await new Promise(resolve => setTimeout(resolve, 1000)); 
+      
       const updatedUser = {
         ...user,
         ...formData
@@ -28,64 +33,87 @@ export const EditUserModal = ({ isOpen, onClose, user, onUpdate }: EditUserModal
       onClose();
     } catch (error) {
       console.error('Erro ao atualizar usuário:', error);
+      // Aqui você poderia definir uma mensagem de erro para o usuário
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Editar Informações">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Campo Nome */}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
             Nome
           </label>
-          <input
-            type="text"
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
+          <div className="relative">
+            <UserIcon className="absolute top-1/2 left-3 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              className="pl-10 pr-4 py-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+              placeholder="Seu nome completo"
+              required
+            />
+          </div>
         </div>
 
+        {/* Campo E-mail */}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
             E-mail
           </label>
-          <input
-            type="email"
-            id="email"
-            value={formData.email}
-            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
+          <div className="relative">
+            <Mail className="absolute top-1/2 left-3 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="email"
+              id="email"
+              value={formData.email}
+              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              className="pl-10 pr-4 py-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+              placeholder="seu.email@exemplo.com"
+              required
+            />
+          </div>
         </div>
 
+        {/* Campo Telefone */}
         <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
             Telefone
           </label>
-          <input
-            type="tel"
-            id="phone"
-            value={formData.phone}
-            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
+          <div className="relative">
+            <Phone className="absolute top-1/2 left-3 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="tel"
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+              className="pl-10 pr-4 py-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+              placeholder="(XX) XXXXX-XXXX"
+            />
+          </div>
         </div>
 
-        <div className="flex justify-end space-x-2">
+        {/* Botões de Ação */}
+        <div className="pt-4 flex justify-end space-x-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-300 transition-colors duration-200 disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             type="submit"
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md"
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md border border-transparent shadow-sm transition-colors duration-200 disabled:opacity-50 disabled:bg-green-400"
           >
-            Salvar
+            {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
           </button>
         </div>
       </form>
