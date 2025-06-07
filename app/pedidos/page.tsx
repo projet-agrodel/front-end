@@ -29,7 +29,7 @@ import {
   ShoppingBag,
   ChevronRight,
 } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
 
@@ -244,16 +244,17 @@ export default function PedidosPage() {
                   )}
                 </CardContent>
 
-                <CardFooter className="border-t pt-4">
-                  <div className="w-full flex justify-between items-center">
-                    <span className="text-gray-500 text-sm">
-                      {formatDistanceToNow(new Date(pedido.created_at), {
-                        addSuffix: true,
-                        locale: ptBR,
-                      })}
+                <CardFooter className="border-t pt-4 bg-gray-50 rounded-b-lg">
+                  <div className="w-full flex justify-between items-center font-medium">
+                    <span className="text-gray-600">
+                      Total do Pedido
                     </span>
-                    <span className="text-lg font-semibold">
-                      Total: R$ {pedido.amount.toFixed(2)}
+                    <span className="text-gray-900">
+                      R${" "}
+                      {pedido.items?.reduce(
+                        (acc, item) => acc + item.price * item.quantity,
+                        0
+                      ).toFixed(2)}
                     </span>
                   </div>
                 </CardFooter>

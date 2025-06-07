@@ -69,6 +69,12 @@ const PedidoDetalhesPage = () => {
     }
   };
 
+  const calcularTotal = () => {
+    if (!pedido?.items) return '0,00';
+    const total = pedido.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    return total.toFixed(2).replace('.', ',');
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -143,7 +149,7 @@ const PedidoDetalhesPage = () => {
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold text-gray-900">Total do Pedido</span>
               <span className="text-2xl font-bold text-green-600">
-                R$ {pedido.amount.toFixed(2).replace('.', ',')}
+                R$ {calcularTotal()}
               </span>
             </div>
           </div>
