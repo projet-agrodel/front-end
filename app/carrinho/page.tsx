@@ -107,7 +107,6 @@ const CartItemDisplay: React.FC<{
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pendingQuantityRef = useRef<number | null>(null);
   const isUpdatingRef = useRef(false);
-  const { data: session } = useSession();
 
   const handleRemoveItem = useCallback(
     async (productId: number) => {
@@ -257,7 +256,7 @@ const CarrinhoPage = () => {
     }
   }, [isLoading, showLoadingIndicator]);
 
-  const onSubmit = async (data: PaymentFormData) => {
+  const onSubmit = async () => {
     try {
       setIsProcessing(true);
 
@@ -281,9 +280,9 @@ const CarrinhoPage = () => {
         throw new Error(error.message);
       }
 
-      await clearCart();
-
       const { order } = await orderResponse.json();
+      
+      await clearCart();
 
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${order.id}`, {
         method: "PATCH",
