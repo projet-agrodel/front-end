@@ -13,6 +13,7 @@ Se você deseja rodar a interface localmente, siga os passos abaixo.
 Antes de iniciar, certifique-se de que os seguintes softwares estão instalados em sua máquina:
 
 * [Node.js](https://nodejs.org/) (versão recomendada: LTS 20 ou superior)
+* Npm (Geralmente vem com o node)
 
 ---
 
