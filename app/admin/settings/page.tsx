@@ -57,11 +57,11 @@ export default function AdminSettingsPage() {
     siteEmail: '',
     sitePhone: '',
     siteAddress: '',
-    emailNotifications: true,
+    emailNotifications: false,
     smsNotifications: false,
     pushNotifications: false,
-    notify_new_order: true,
-    notify_stock_alert: true,
+    notify_new_order: false,
+    notify_stock_alert: false,
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
@@ -126,10 +126,20 @@ export default function AdminSettingsPage() {
   ];
 
   const handleInputChange = (field: string, value: string | number | boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    const newFormData = { ...formData, [field]: value };
+
+    // Se o interruptor principal de email for desligado, desliga os filhos.
+    if (field === 'emailNotifications' && value === false) {
+      newFormData.notify_new_order = false;
+      newFormData.notify_stock_alert = false;
+    }
+    
+    // Se um dos filhos for ligado, liga o interruptor principal.
+    if ((field === 'notify_new_order' || field === 'notify_stock_alert') && value === true) {
+        newFormData.emailNotifications = true;
+    }
+
+    setFormData(newFormData);
   };
 
   const handleSave = async () => {
