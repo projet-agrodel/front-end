@@ -14,6 +14,8 @@ export interface User extends Timestamps {
   phone?: string | null; // Tornar opcional/nulável se puder ser nulo no DB/resposta
   type: "admin" | "user"; // Consistente com UserType do backend
   status: 'ativo' | 'bloqueado';
+  notify_new_order: boolean;
+  notify_stock_alert: boolean;
   avatar?: string | null; // URL do avatar do usuário
 
   // Relacionamentos (opcionais, pois não vêm por padrão de user.to_dict())

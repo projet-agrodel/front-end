@@ -51,7 +51,7 @@ const LoginPage = () => {
       }
 
       if (result?.ok) {
-        router.push('/');
+      router.push('/');
       }
       
     } catch (err) {
