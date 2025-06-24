@@ -139,15 +139,37 @@ export interface FonteTrafegoItem {
 
 export interface VisitantesUnicosSummaryCardsData {
   totalVisitantes: number;
-  visitantesRecorrentesPercentual: number;
-  novasSessoesPercentual: number;
-  taxaRejeicaoPercentual: number;
+  visitantesRecorrentesPercentual: number; 
+  novasSessoesPercentual: number; 
+  taxaRejeicaoPercentual: number; 
 }
 
 export interface VisitantesUnicosDetailsData {
   evolutionData: VisitanteEvolucaoItem[];
   trafficSourcesData: FonteTrafegoItem[];
   summaryCardsData: VisitantesUnicosSummaryCardsData;
+}
+
+// --- Novas interfaces para o Dashboard Principal do Admin ---
+export interface DashboardSummaryData {
+  activeUsers: number;
+  totalSalesCount: number;
+  totalRevenue: number;
+  productCount: number;
+}
+
+export interface MonthlySalesData {
+  month: string;
+  sales: number;
+  revenue: number;
+}
+
+export interface RecentSalesData {
+  id: string;
+  customer: string;
+  date: string;
+  total: number;
+  status: string;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -206,6 +228,73 @@ export async function getRecentActivities(token: string): Promise<RecentActivity
     throw new Error(errorMessage);
   }
 
+  return response.json();
+}
+
+// --- Novas funções para o Dashboard Principal do Admin ---
+export async function getDashboardSummary(token: string): Promise<DashboardSummaryData> {
+  const response = await fetch(`${API_URL}/admin/analytics/dashboard/summary`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    let errorMessage = `Erro HTTP: ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorData.msg || errorMessage;
+    } catch (e) {
+      console.error("Falha ao parsear erro JSON de dashboard summary:", e);
+    }
+    throw new Error(errorMessage);
+  }
+  return response.json();
+}
+
+export async function getMonthlySales(token: string): Promise<MonthlySalesData[]> {
+  const response = await fetch(`${API_URL}/admin/analytics/dashboard/monthly-sales`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    let errorMessage = `Erro HTTP: ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorData.msg || errorMessage;
+    } catch (e) {
+      console.error("Falha ao parsear erro JSON de monthly sales:", e);
+    }
+    throw new Error(errorMessage);
+  }
+  return response.json();
+}
+
+export async function getRecentSales(token: string): Promise<RecentSalesData[]> {
+  const response = await fetch(`${API_URL}/admin/analytics/dashboard/recent-sales`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    let errorMessage = `Erro HTTP: ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorData.msg || errorMessage;
+    } catch (e) {
+      console.error("Falha ao parsear erro JSON de recent sales:", e);
+    }
+    throw new Error(errorMessage);
+  }
   return response.json();
 }
 

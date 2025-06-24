@@ -1,42 +1,23 @@
 'use client'; // Adicionar esta diretiva para componentes de cliente (gráficos)
 
 import React from 'react';
+import { useEffect } from 'react'; // Importar useEffect
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line
 } from 'recharts';
 // Importar ícones reais
 import { DollarSign, ShoppingBag, Users, Archive } from 'lucide-react'; 
+import { useSession } from 'next-auth/react'; // Importar useSession
 
-async function getAdminDashboardData() {
-  // Simula um pequeno atraso de rede
-  await new Promise(resolve => setTimeout(resolve, 50));
-
-  // Dados fictícios
-  return {
-    activeUsers: 1250,
-    totalSalesCount: 580,
-    totalRevenue: 45890.75,
-    productCount: 215,
-    // Dados para gráfico de vendas mensais (últimos 6 meses)
-    monthlySales: [
-      { month: 'Jan', sales: 6500.50, revenue: 8000 },
-      { month: 'Fev', sales: 5900.00, revenue: 7500 },
-      { month: 'Mar', sales: 8000.75, revenue: 10000 },
-      { month: 'Abr', sales: 7100.25, revenue: 9000 },
-      { month: 'Mai', sales: 9500.00, revenue: 11000 },
-      { month: 'Jun', sales: 8890.25, revenue: 10500 },
-    ],
-    // Dados para tabela de vendas recentes
-    recentSales: [
-      { id: 'ORD-001', customer: 'João Silva', date: '2024-07-27', total: 150.00, status: 'Concluído' },
-      { id: 'ORD-002', customer: 'Maria Oliveira', date: '2024-07-26', total: 85.50, status: 'Pendente' },
-      { id: 'ORD-003', customer: 'Carlos Souza', date: '2024-07-26', total: 210.75, status: 'Concluído' },
-      { id: 'ORD-004', customer: 'Ana Pereira', date: '2024-07-25', total: 55.00, status: 'Enviado' },
-      { id: 'ORD-005', customer: 'Pedro Costa', date: '2024-07-25', total: 320.00, status: 'Concluído' },
-    ]
-  };
-}
+import { 
+  getDashboardSummary, 
+  getMonthlySales, 
+  getRecentSales,
+  DashboardSummaryData,
+  MonthlySalesData,
+  RecentSalesData
+} from '@/services/adminAnalyticsService'; // Importar serviços e interfaces
 
 interface MetricCardProps {
   title: string;
@@ -67,7 +48,7 @@ function MetricCard({ title, value, icon, change, changeType }: MetricCardProps)
 
 // Componente Gráfico Principal (agora LineChart)
 interface RevenueChartProps {
-  data: { month: string; revenue: number; sales: number }[]; // Adicionado sales como exemplo
+  data: MonthlySalesData[]; // Usar a interface importada
 }
 function RevenueChart({ data }: RevenueChartProps) {
   const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -92,7 +73,7 @@ function RevenueChart({ data }: RevenueChartProps) {
 
 // Tabela de Vendas Recentes (estilo ajustado)
 interface RecentSalesTableProps {
-  data: { id: string; customer: string; date: string; total: number; status: string }[];
+  data: RecentSalesData[]; // Usar a interface importada
 }
 function RecentSalesTable({ data }: RecentSalesTableProps) {
   const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -143,21 +124,66 @@ function RecentSalesTable({ data }: RecentSalesTableProps) {
 
 // --- Componente Principal da Página ---
 export default function AdminDashboardPage() {
-  // Estado para armazenar os dados (necessário para 'use client')
-  const [data, setData] = React.useState<Awaited<ReturnType<typeof getAdminDashboardData>> | null>(null);
+  const { data: session } = useSession();
+  const token = session?.accessToken as string | undefined;
+
+  // Estados para armazenar os dados do backend
+  const [summaryData, setSummaryData] = React.useState<DashboardSummaryData | null>(null);
+  const [monthlySalesData, setMonthlySalesData] = React.useState<MonthlySalesData[] | null>(null);
+  const [recentSalesData, setRecentSalesData] = React.useState<RecentSalesData[] | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    getAdminDashboardData().then(fetchedData => {
-      setData(fetchedData);
-    });
-  }, []);
+    const fetchData = async () => {
+      if (!token) {
+        setError("Autenticação não encontrada. Não é possível carregar os dados.");
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      try {
+        const [summary, monthly, recent] = await Promise.all([
+          getDashboardSummary(token),
+          getMonthlySales(token),
+          getRecentSales(token)
+        ]);
+        setSummaryData(summary);
+        setMonthlySalesData(monthly);
+        setRecentSalesData(recent);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Falha ao carregar dados do dashboard.');
+        console.error("Erro ao buscar dados do dashboard:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (session?.accessToken) {
+      fetchData();
+    } else if (session === null) { // Sessão explicitamente nula (não está carregando, mas não há sessão)
+      setError("Usuário não autenticado. Não é possível carregar os dados.");
+      setLoading(false);
+    }
+  }, [session, token]);
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  if (!data) {
+  if (loading) {
     return <div className="flex items-center justify-center h-full">Carregando dados...</div>;
+  }
+
+  if (error) {
+    return <div className="flex items-center justify-center h-full text-red-600">Erro: {error}</div>;
+  }
+
+  // Se os dados ainda não foram carregados ou há um erro, não renderize o dashboard
+  if (!summaryData || !monthlySalesData || !recentSalesData) {
+    return null; // Ou um fallback mais elaborado
   }
 
   return (
@@ -166,28 +192,28 @@ export default function AdminDashboardPage() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
                 title="Receita Total"
-                value={formatCurrency(data.totalRevenue)}
+                value={formatCurrency(summaryData.totalRevenue)}
                 icon={<DollarSign size={24} className="text-green-600" />}
                 change="+12% vs mês passado" 
                 changeType='positive'
             />
             <MetricCard
                 title="Total de Vendas"
-                value={data.totalSalesCount.toLocaleString('pt-BR')}
+                value={summaryData.totalSalesCount.toLocaleString('pt-BR')}
                 icon={<ShoppingBag size={24} className="text-blue-600" />}
                 change="+80 pedidos"
                 changeType='positive'
             />
             <MetricCard
                 title="Usuários Ativos"
-                value={data.activeUsers.toLocaleString('pt-BR')}
+                value={summaryData.activeUsers.toLocaleString('pt-BR')}
                 icon={<Users size={24} className="text-purple-600" />}
                 change="-5% vs mês passado"
                 changeType='negative'
             />
              <MetricCard
                 title="Produtos Cadastrados"
-                value={data.productCount.toLocaleString('pt-BR')}
+                value={summaryData.productCount.toLocaleString('pt-BR')}
                 icon={<Archive size={24} className="text-orange-500" />}
             />
         </div>
@@ -196,15 +222,15 @@ export default function AdminDashboardPage() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mt-6">
           {/* Gráfico ocupando mais espaço */}
           <div className="lg:col-span-3">
-             <RevenueChart data={data.monthlySales} />
+             <RevenueChart data={monthlySalesData} />
           </div>
 
           {/* Tabela abaixo ou ao lado dependendo do espaço */}
            <div className="lg:col-span-3">
-             <RecentSalesTable data={data.recentSales} />
+             <RecentSalesTable data={recentSalesData} />
           </div>
           {/* Você poderia adicionar mais gráficos/cards aqui, como o Donut e Bar Chart da imagem */}
         </div>
     </div>
   );
-} 
+}
