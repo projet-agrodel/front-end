@@ -56,4 +56,40 @@ export const updateUserStatus = async (userId: string, status: 'ativo' | 'bloque
     }
 
     return response.json();
+};
+
+export const getProfile = async (token: string): Promise<User> => {
+  const response = await fetch(`${API_BASE_URL}/api/user/profile`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error('Falha ao buscar perfil do usuário');
+  }
+  return response.json();
+};
+
+export const updateNotificationSettings = async (
+  token: string,
+  settings: {
+    notify_new_order?: boolean;
+    notify_stock_alert?: boolean;
+  }
+) => {
+  const response = await fetch(`${API_BASE_URL}/api/user/notification-settings`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(settings),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
+    throw new Error(errorData.message || 'Falha ao atualizar as configurações de notificação');
+  }
+
+  return response.json();
 }; 

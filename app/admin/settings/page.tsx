@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useSession } from 'next-auth/react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { getProfile, updateNotificationSettings } from '@/services/userService';
 import {
   Settings, 
   Bell, 
   Shield, 
   Globe, 
   Mail, 
-  Phone, 
-  MapPin,
   Save,
-  Lock,
-  Eye,
-  EyeOff
+  RefreshCw
 } from 'lucide-react';
 
 interface ConfigSection {
@@ -23,31 +23,85 @@ interface ConfigSection {
   description: string;
 }
 
-export default function AdminSettingsPage() {
-  const [activeSection, setActiveSection] = useState('general');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+interface NotificationSettings {
+  notify_new_order: boolean;
+  notify_stock_alert: boolean;
+}
 
-  const [formData, setFormData] = useState({
-    // Configurações Gerais
-    siteName: 'Agrodel',
-    siteDescription: 'Sua loja de produtos agrícolas',
-    siteEmail: 'contato@agrodel.com',
-    sitePhone: '(11) 99999-9999',
-    siteAddress: 'Rua das Plantas, 123 - São Paulo, SP',
-    
-    // Notificações
-    emailNotifications: true,
+interface FormData {
+  siteName: string;
+  siteDescription: string;
+  siteEmail: string;
+  sitePhone: string;
+  siteAddress: string;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  pushNotifications: boolean;
+  notify_new_order: boolean;
+  notify_stock_alert: boolean;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+  twoFactorEnabled: boolean;
+}
+
+export default function AdminSettingsPage() {
+  const [activeSection, setActiveSection] = useState('notifications');
+  
+  const { data: session } = useSession();
+  const queryClient = useQueryClient();
+
+  const [formData, setFormData] = useState<FormData>({
+    siteName: '',
+    siteDescription: '',
+    siteEmail: '',
+    sitePhone: '',
+    siteAddress: '',
+    emailNotifications: false,
     smsNotifications: false,
-    pushNotifications: true,
-    orderNotifications: true,
-    stockNotifications: true,
-    
-    // Segurança
+    pushNotifications: false,
+    notify_new_order: false,
+    notify_stock_alert: false,
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
     twoFactorEnabled: false
+  });
+
+  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ['userProfile'],
+    queryFn: () => getProfile(session?.accessToken as string),
+    enabled: !!session?.accessToken,
+  });
+
+  useEffect(() => {
+    if (profile) {
+      setFormData(prev => ({
+        ...prev,
+        // Mantem as configurações gerais estáticas por enquanto
+        siteName: 'Agrodel',
+        siteDescription: 'Sua loja de produtos agrícolas',
+        siteEmail: 'contato@agrodel.com',
+        sitePhone: '(11) 99999-9999',
+        siteAddress: 'Rua das Plantas, 123 - São Paulo, SP',
+        // Atualiza as configurações de notificação com dados do perfil
+        emailNotifications: profile.notify_new_order || profile.notify_stock_alert,
+        notify_new_order: profile.notify_new_order,
+        notify_stock_alert: profile.notify_stock_alert,
+      }));
+    }
+  }, [profile]);
+
+  const updateNotificationMutation = useMutation({
+    mutationFn: (settings: NotificationSettings) => 
+      updateNotificationSettings(session?.accessToken as string, settings),
+    onSuccess: () => {
+      toast.success('Configurações de notificação salvas com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+    },
+    onError: (error) => {
+      toast.error(`Erro ao salvar: ${error.message}`);
+    }
   });
 
   const configSections: ConfigSection[] = [
@@ -61,7 +115,7 @@ export default function AdminSettingsPage() {
       id: 'notifications',
       title: 'Notificações',
       icon: <Bell className="w-5 h-5" />,
-      description: 'Gerencie suas preferências de notificação'
+      description: 'Gerencie suas preferências de notificação por e-mail'
     },
     {
       id: 'security',
@@ -72,17 +126,142 @@ export default function AdminSettingsPage() {
   ];
 
   const handleInputChange = (field: string, value: string | number | boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    const newFormData = { ...formData, [field]: value };
+
+    // Se o interruptor principal de email for desligado, desliga os filhos.
+    if (field === 'emailNotifications' && value === false) {
+      newFormData.notify_new_order = false;
+      newFormData.notify_stock_alert = false;
+    }
+    
+    // Se um dos filhos for ligado, liga o interruptor principal.
+    if ((field === 'notify_new_order' || field === 'notify_stock_alert') && value === true) {
+        newFormData.emailNotifications = true;
+    }
+
+    setFormData(newFormData);
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
-    // Simular salvamento
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsSaving(false);
+    if (activeSection === 'notifications') {
+      updateNotificationMutation.mutate({
+        notify_new_order: formData.notify_new_order,
+        notify_stock_alert: formData.notify_stock_alert,
+      });
+    } else {
+      // Lógica para salvar outras seções
+      toast.info('Salvando outras configurações...');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      toast.success('Configurações salvas!');
+    }
+  };
+  
+  const renderNotificationSettings = () => {
+    if (isLoadingProfile) {
+      return (
+        <div className="flex items-center justify-center py-8">
+            <RefreshCw className="animate-spin h-6 w-6 text-gray-400" />
+            <span className="ml-2 text-gray-500">Carregando configurações...</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <h4 className="font-medium text-green-900 mb-2">Canais de Notificação</h4>
+          <p className="text-sm text-green-700">
+            Ative ou desative os canais por onde você deseja receber notificações.
+          </p>
+        </div>
+
+        {/* Canal de Email */}
+        <div className="p-4 bg-white border border-gray-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-gray-900">Notificações por Email</h4>
+              <p className="text-sm text-gray-500">Receba atualizações por email</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.emailNotifications}
+                onChange={(e) => handleInputChange('emailNotifications', e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+            </label>
+          </div>
+          
+          <motion.div
+            initial={false}
+            animate={{ height: formData.emailNotifications ? 'auto' : 0, opacity: formData.emailNotifications ? 1 : 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+              <p className="text-sm text-gray-600">Quais notificações de e-mail você quer receber?</p>
+              {[
+                { key: 'notify_new_order', label: 'Alertas de Novos Pedidos', description: 'Receber um e-mail a cada novo pedido realizado.' },
+                { key: 'notify_stock_alert', label: 'Alertas de Estoque Baixo', description: 'Ser avisado quando o estoque de um produto estiver acabando.' }
+              ].map((item) => (
+                <div key={item.key} className="flex items-center justify-between pl-4">
+                  <div>
+                    <h5 className="font-normal text-gray-800">{item.label}</h5>
+                    <p className="text-xs text-gray-500">{item.description}</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData[item.key as keyof typeof formData] as boolean}
+                      onChange={(e) => handleInputChange(item.key, e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                  </label>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Canal de SMS */}
+        <div className="flex items-center justify-between p-4 bg-gray-100 border border-gray-200 rounded-lg opacity-60">
+          <div>
+            <h4 className="font-medium text-gray-500">Notificações por SMS</h4>
+            <p className="text-sm text-gray-400">Receba alertas via SMS (Em breve)</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-not-allowed">
+            <input
+              type="checkbox"
+              checked={formData.smsNotifications}
+              onChange={(e) => handleInputChange('smsNotifications', e.target.checked)}
+              className="sr-only peer"
+              disabled
+            />
+            <div className="w-11 h-6 bg-gray-300 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+          </label>
+        </div>
+        
+        {/* Canal Push */}
+        <div className="flex items-center justify-between p-4 bg-gray-100 border border-gray-200 rounded-lg opacity-60">
+          <div>
+            <h4 className="font-medium text-gray-500">Notificações Push</h4>
+            <p className="text-sm text-gray-400">Notificações do navegador (Em breve)</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-not-allowed">
+            <input
+              type="checkbox"
+              checked={formData.pushNotifications}
+              onChange={(e) => handleInputChange('pushNotifications', e.target.checked)}
+              className="sr-only peer"
+              disabled
+            />
+            <div className="w-11 h-6 bg-gray-300 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+          </label>
+        </div>
+      </div>
+    );
   };
 
   const renderGeneralSettings = () => (
@@ -97,6 +276,7 @@ export default function AdminSettingsPage() {
             value={formData.siteName}
             onChange={(e) => handleInputChange('siteName', e.target.value)}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+            disabled
           />
         </div>
         
@@ -111,169 +291,24 @@ export default function AdminSettingsPage() {
               value={formData.siteEmail}
               onChange={(e) => handleInputChange('siteEmail', e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-            />
-          </div>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Telefone
-          </label>
-          <div className="relative">
-            <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="tel"
-              value={formData.sitePhone}
-              onChange={(e) => handleInputChange('sitePhone', e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-            />
-          </div>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Endereço
-          </label>
-          <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              value={formData.siteAddress}
-              onChange={(e) => handleInputChange('siteAddress', e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              disabled
             />
           </div>
         </div>
       </div>
-      
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Descrição da Plataforma
-        </label>
-        <textarea
-          value={formData.siteDescription}
-          onChange={(e) => handleInputChange('siteDescription', e.target.value)}
-          rows={3}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all resize-none"
-        />
-      </div>
-    </div>
-  );
-
-  const renderNotificationSettings = () => (
-    <div className="space-y-6">
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-        <h4 className="font-medium text-green-900 mb-2">Tipos de Notificação</h4>
-        <p className="text-sm text-green-700">
-          Configure como você deseja receber notificações sobre atividades da plataforma.
-        </p>
-      </div>
-      
-      <div className="space-y-4">
-        {[
-          { key: 'emailNotifications', label: 'Notificações por Email', description: 'Receba atualizações por email' },
-          { key: 'smsNotifications', label: 'Notificações por SMS', description: 'Receba alertas via SMS' },
-          { key: 'pushNotifications', label: 'Notificações Push', description: 'Notificações do navegador' },
-          { key: 'orderNotifications', label: 'Alertas de Pedidos', description: 'Notificar sobre novos pedidos' },
-          { key: 'stockNotifications', label: 'Alertas de Estoque', description: 'Avisar quando o estoque estiver baixo' }
-        ].map((item) => (
-          <div key={item.key} className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg">
-            <div>
-              <h4 className="font-medium text-gray-900">{item.label}</h4>
-              <p className="text-sm text-gray-500">{item.description}</p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData[item.key as keyof typeof formData] as boolean}
-                onChange={(e) => handleInputChange(item.key, e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-            </label>
-          </div>
-        ))}
+       <div className="text-center text-gray-500 text-sm pt-4">
+        As configurações gerais são apenas para visualização no momento.
       </div>
     </div>
   );
 
   const renderSecuritySettings = () => (
     <div className="space-y-6">
-      <div className="bg-yellow-50 border border-red-200 rounded-lg p-4">
-        <h4 className="font-medium text-yellow-900 mb-2">Configurações de Segurança</h4>
+       <div className="bg-yellow-50 border border-red-200 rounded-lg p-4">
+        <h4 className="font-medium text-yellow-900 mb-2">Em Breve</h4>
         <p className="text-sm text-yellow-700">
-          Mantenha sua conta segura atualizando suas credenciais regularmente.
+         A funcionalidade de alteração de senha e autenticação de dois fatores será implementada em breve.
         </p>
-      </div>
-      
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Senha Atual
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type={showPassword ? "text" : "password"}
-              value={formData.currentPassword}
-              onChange={(e) => handleInputChange('currentPassword', e.target.value)}
-              className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
-          </div>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Nova Senha
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type={showPassword ? "text" : "password"}
-              value={formData.newPassword}
-              onChange={(e) => handleInputChange('newPassword', e.target.value)}
-              className="w-full pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-            />
-          </div>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Confirmar Nova Senha
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type={showPassword ? "text" : "password"}
-              value={formData.confirmPassword}
-              onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-              className="w-full pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-            />
-          </div>
-        </div>
-        
-        <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg">
-          <div>
-            <h4 className="font-medium text-gray-900">Autenticação de Dois Fatores</h4>
-            <p className="text-sm text-gray-500">Adicione uma camada extra de segurança</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.twoFactorEnabled}
-              onChange={(e) => handleInputChange('twoFactorEnabled', e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-          </label>
-        </div>
       </div>
     </div>
   );
@@ -359,13 +394,22 @@ export default function AdminSettingsPage() {
               <div className="flex justify-end">
                 <motion.button
                   onClick={handleSave}
-                  disabled={isSaving}
+                  disabled={updateNotificationMutation.isPending}
                   className="flex items-center bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <Save className="w-5 h-5 mr-2" />
-                  {isSaving ? 'Salvando...' : 'Salvar Configurações'}
+                  {updateNotificationMutation.isPending ? (
+                    <div className="flex items-center">
+                      <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                      Salvando...
+                    </div>
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5 mr-2" />
+                      Salvar Alterações
+                    </>
+                  )}
                 </motion.button>
               </div>
             </div>

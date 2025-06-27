@@ -49,15 +49,15 @@ export const EditUserModal = ({ isOpen, onClose, user, onUpdate }: EditUserModal
           </label>
           <div className="relative">
             <UserIcon className="absolute top-1/2 left-3 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+          <input
+            type="text"
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               className="pl-10 pr-4 py-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
               placeholder="Seu nome completo"
               required
-            />
+          />
           </div>
         </div>
 
@@ -68,15 +68,15 @@ export const EditUserModal = ({ isOpen, onClose, user, onUpdate }: EditUserModal
           </label>
           <div className="relative">
             <Mail className="absolute top-1/2 left-3 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="email"
-              id="email"
-              value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+          <input
+            type="email"
+            id="email"
+            value={formData.email}
+            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               className="pl-10 pr-4 py-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
               placeholder="seu.email@exemplo.com"
               required
-            />
+          />
           </div>
         </div>
 
@@ -87,14 +87,14 @@ export const EditUserModal = ({ isOpen, onClose, user, onUpdate }: EditUserModal
           </label>
           <div className="relative">
             <Phone className="absolute top-1/2 left-3 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="tel"
-              id="phone"
-              value={formData.phone}
-              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+          <input
+            type="tel"
+            id="phone"
+            value={formData.phone}
+            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
               className="pl-10 pr-4 py-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
               placeholder="(XX) XXXXX-XXXX"
-            />
+          />
           </div>
         </div>
 
