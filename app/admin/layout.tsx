@@ -3,10 +3,9 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  LayoutDashboard, ShoppingCart, Package, Users, Tag, Settings, LogOut, Bell, UserCircle,
-  MessageSquare
-} from 'lucide-react'; // Importar ícones reais. BarChart2 removido.
-import AdvancedAnalyticsButton from './_components/AdvancedAnalyticsButton'; // Importar o botão
+  LayoutDashboard, ShoppingCart, Package, Users, Tag, Settings, LogOut,
+  MessageSquare, BarChart2
+} from 'lucide-react';
 
 // Hook para obter o pathname (necessário para link ativo)
 import { usePathname } from 'next/navigation';
@@ -18,6 +17,7 @@ function Sidebar() {
 
   const navItems = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { name: 'Advanced Analytics', href: '/admin/advanced-analytics', icon: BarChart2 },
     { name: 'Produtos', href: '/admin/products', icon: Package },
     { name: 'Pedidos', href: '/admin/orders', icon: ShoppingCart },
     { name: 'Clientes', href: '/admin/customers', icon: Users },
@@ -77,8 +77,6 @@ function Sidebar() {
     </div>
   );
 }
-
-
 
 // Layout Principal Atualizado
 export default function AdminLayout({
